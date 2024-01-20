@@ -1,0 +1,18 @@
+{
+    "trivia" : [
+        {
+            "q": "Which city does the TV show Family Guy take place in?",
+            "a": {
+                "Quahog": true,
+                "Pawtucket": false
+            }
+        },
+        {
+            "q": "Which character is married to Bonnie?",
+            "a": {
+                "Joe Swanson": true,
+                "Glenn Quagmire": false
+            }
+        }
+    ]
+}

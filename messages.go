@@ -28,8 +28,30 @@ type OutgoingMessage struct {
 	Content []byte            `json:"content"`
 }
 
+// incoming
 type JoinRoomMessage struct {
 	Code string `json:"code"`
+}
+
+// outgoing
+type JoinRoomSuccessMessage struct {
+	// player number within the room
+	You int `json:"you"`
+}
+
+// incoming message from client which modifies room state, nil field means no-op
+type RoomActionMessage struct {
+	// attached by hub
+	from *Player
+
+	// which team to join, 0 is blue 1 is red, nil means no action
+	Join *int `json:"join"`
+
+	// which option in the trivia to guess
+	Guess *string `json:"guess"`
+
+	// new chat message
+	Chat *string `json:"chat"`
 }
 
 type ErrorWithMessage struct {
@@ -47,4 +69,14 @@ func ServerErrorHelper(msg string) OutgoingMessage {
 type RoomUpdateMessage struct {
 	Code    string   `json:"code"`
 	Players []string `json:"players"`
+	Chat []string `json:"chat"`
+}
+
+type TriviaStateUpdateMessage struct {
+
+}
+
+
+type TriviaGameActionMessage struct {
+
 }
