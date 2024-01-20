@@ -78,7 +78,7 @@ func (r *Room) broadcastRoomUpdate() {
 	}
 	r.mu.Lock()
 	playerlist := []string{}
-	for p, _ := range r.players {
+	for p := range r.players {
 		playerlist = append(playerlist, p.name)
 	}
 	rum := RoomUpdateMessage{
@@ -87,7 +87,7 @@ func (r *Room) broadcastRoomUpdate() {
 		Chat: r.chat,
 	}
 	str, _ := json.Marshal(rum)
-	for player, _ := range r.players {
+	for player := range r.players {
 		player.send <- OutgoingMessage{
 			Type:    RoomUpdate,
 			Content: str,
