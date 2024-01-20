@@ -45,10 +45,10 @@ func (h *Hub) joinRoom(p *Player, code string) {
 		return
 	} else {
 		room.mu.Lock()
-		room.players[p] = len(room.players) + 1
+		room.players[p] = len(room.players)
 		p.room = room
-		room.broadcastRoomUpdate()
 		room.mu.Unlock()
+		room.broadcastRoomUpdate()
 	}
 }
 
@@ -81,16 +81,15 @@ func (h *Hub) run() {
 		case player := <-h.register:
 			h.players[player] = true
 		case player := <-h.unregister:
-			delete(h.players, player)
 			if player.room != nil {
 				if _, in := h.rooms[player.room.code]; in {
 					playerroom := h.rooms[player.room.code]
-					playerroom.mu.Lock()
-					delete(playerroom.players, player)
-					playerroom.mu.Unlock()
+					playerroom.writeChat(fmt.Sprintf("Player %d left the room", playerroom.players[player]))
+					playerroom.removePlayer(player)
 					playerroom.broadcastRoomUpdate()
 				}
 			}
+			delete(h.players, player)
 			close(player.send)
 			fmt.Println("Unregistered client and removed from room")
 			break

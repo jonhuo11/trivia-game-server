@@ -64,10 +64,20 @@ func (r *Room) run() {
 	}
 }
 
+
+func (r *Room) removePlayer(player *Player) {
+	r.mu.Lock()
+	if _, in := r.players[player]; in {
+		player.room = nil
+		delete(r.players, player)
+	}
+	r.mu.Unlock()
+}
+
 func (r *Room) writeChat(msg string) {
 	r.mu.Lock()
 	r.chat = append(r.chat, msg)
-	fmt.Println(r.chat)
+	//fmt.Println(r.chat)
 	r.mu.Unlock()
 }
 
