@@ -35,7 +35,6 @@ func newHub() *Hub {
 	}
 }
 
-
 func (h *Hub) joinRoom(p *Player, code string) {
 	if p.room != nil {
 		p.send <- ServerErrorHelper("this player is already in a room")
@@ -60,12 +59,12 @@ func (h *Hub) createRoom(creator *Player) {
 	}
 	id := uuid.New().String()
 	newroom := &Room{
-		code:    id,
-		players: map[*Player]int{creator: 0},
-		chat: []string{fmt.Sprintf("Welcome to room %s", id)},
-		state: Lobby,
-		gamestate: TriviaState{},
-		incomingRoomActions: make(chan RoomActionMessage),
+		code:                  id,
+		players:               map[*Player]int{creator: 0},
+		chat:                  []string{fmt.Sprintf("Welcome to room %s", id)},
+		state:                 Lobby,
+		gamestate:             TriviaState{},
+		incomingRoomActions:   make(chan RoomActionMessage),
 		incomingTriviaActions: make(chan TriviaGameActionMessage),
 	}
 	h.rooms[id] = newroom

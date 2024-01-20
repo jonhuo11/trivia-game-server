@@ -9,19 +9,19 @@ import (
 type RoomState int64
 
 const (
-	Lobby RoomState = 0
+	Lobby  RoomState = 0
 	InGame RoomState = 1
 )
 
 type TriviaState struct {
-	Round int
-	Timer int
-	Blue map[*Player]bool
-	Red map[*Player]bool
+	Round     int
+	Timer     int
+	Blue      map[*Player]bool
+	Red       map[*Player]bool
 	BlueScore int
-	RedScore int
-	Question string
-	Answer string
+	RedScore  int
+	Question  string
+	Answer    string
 }
 
 type Room struct {
@@ -47,7 +47,7 @@ type Room struct {
 func (r *Room) run() {
 	for {
 		select {
-		case ram := <- r.incomingRoomActions:
+		case ram := <-r.incomingRoomActions:
 			//fmt.Println("Room action received")
 			// chat?
 			if ram.Chat != nil {
@@ -57,7 +57,7 @@ func (r *Room) run() {
 			// broadcast an update
 			r.broadcastRoomUpdate()
 			break
-		case tgam := <- r.incomingTriviaActions:
+		case tgam := <-r.incomingTriviaActions:
 			fmt.Println("Not implemented trivia actions", tgam)
 			break
 		}
@@ -84,7 +84,7 @@ func (r *Room) broadcastRoomUpdate() {
 	rum := RoomUpdateMessage{
 		Code:    r.code,
 		Players: playerlist,
-		Chat: r.chat,
+		Chat:    r.chat,
 	}
 	str, _ := json.Marshal(rum)
 	for player := range r.players {

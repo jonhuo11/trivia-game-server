@@ -69,14 +69,11 @@ func ServerErrorHelper(msg string) OutgoingMessage {
 type RoomUpdateMessage struct {
 	Code    string   `json:"code"`
 	Players []string `json:"players"`
-	Chat []string `json:"chat"`
+	Chat    []string `json:"chat"`
 }
 
 type TriviaStateUpdateMessage struct {
-
 }
 
-
 type TriviaGameActionMessage struct {
-
 }
