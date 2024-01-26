@@ -63,7 +63,7 @@ func (h *Hub) createRoom(creator *Player) {
 		players:               map[*Player]int{creator: 0},
 		chat:                  []string{fmt.Sprintf("Welcome to room %s", id)},
 		state:                 Lobby,
-		gamestate:             TriviaState{},
+		gamestate:             newTriviaState(),
 		incomingRoomActions:   make(chan RoomActionMessage),
 		incomingTriviaActions: make(chan TriviaGameActionMessage),
 	}
@@ -114,7 +114,12 @@ func (h *Hub) run() {
 
 				// parse the message content as a room message and send to room handler
 				if message.From.room != nil {
-					rm := RoomActionMessage{from: message.From}
+					rm := RoomActionMessage{
+						ActionMessage{
+							from: message.From,
+						},
+						nil,
+					}
 					if err := json.Unmarshal(message.Content, &rm); err != nil {
 						message.From.send <- ServerErrorHelper("Bad RoomActionMessage format")
 					} else {
@@ -123,6 +128,9 @@ func (h *Hub) run() {
 				} else {
 					message.From.send <- ServerErrorHelper("Not in a room")
 				}
+				break
+			case GameAction:
+				// related to the trivia gamestate itself
 				break
 			default:
 				break

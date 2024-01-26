@@ -14,14 +14,27 @@ const (
 )
 
 type TriviaState struct {
-	Round     int
-	Timer     int
-	Blue      map[*Player]bool
-	Red       map[*Player]bool
-	BlueScore int
-	RedScore  int
-	Question  string
-	Answer    string
+	round     int
+	timer     int
+	blue      map[*Player]bool
+	red       map[*Player]bool
+	blueScore int
+	redScore  int
+	question  string
+	answer    string
+}
+
+func newTriviaState () TriviaState {
+	return TriviaState {
+		round: 0,
+		timer: 20,
+		blue: make(map[*Player]bool),
+		red: make(map[*Player]bool),
+		blueScore: 0,
+		redScore: 0,
+		question: "",
+		answer: "",
+	}
 }
 
 type Room struct {
@@ -58,12 +71,36 @@ func (r *Room) run() {
 			r.broadcastRoomUpdate()
 			break
 		case tgam := <-r.incomingTriviaActions:
-			fmt.Println("Not implemented trivia actions", tgam)
+			switch(r.state) {
+			case Lobby:
+				// team select
+				if tgam.Join != nil {
+					r.joinTeam(tgam.from, *tgam.Join)
+				}
+				r.broadcastGameUpdate()
+				break
+			case InGame:
+				break
+			default:
+				break
+			}
 			break
 		}
 	}
 }
 
+// 0 is blue 1 is red
+func (r *Room) joinTeam(player* Player, team int) {
+	r.mu.Lock()
+	if team == 0 {
+		r.gamestate.blue[player] = true
+		delete(r.gamestate.red, player)
+	} else {
+		r.gamestate.red[player] = true
+		delete(r.gamestate.blue, player)
+	}
+	r.mu.Unlock()
+}
 
 func (r *Room) removePlayer(player *Player) {
 	r.mu.Lock()
@@ -87,6 +124,7 @@ func (r *Room) broadcastRoomUpdate() {
 		return
 	}
 	r.mu.Lock()
+	defer r.mu.Unlock()
 	playerlist := []string{}
 	for p := range r.players {
 		playerlist = append(playerlist, p.name)
@@ -103,5 +141,31 @@ func (r *Room) broadcastRoomUpdate() {
 			Content: str,
 		}
 	}
-	r.mu.Unlock()
+}
+
+func (r *Room) broadcastGameUpdate() {
+	if r == nil {return}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	blue := []string{}
+	red := []string{}
+	for p := range r.gamestate.blue {
+		blue = append(blue, p.name)
+	}
+	for p := range r.gamestate.red {
+		red = append(red, p.name)
+	}
+
+	tsum := TriviaStateUpdateMessage{
+		BlueTeam: blue,
+		RedTeam: red,
+	}
+	str, _ := json.Marshal(tsum)
+	for player := range r.players{
+		player.send <- OutgoingMessage{
+			Type: TriviaGameUpdate,
+			Content: str,
+		}
+	}
 }
