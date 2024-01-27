@@ -67,10 +67,11 @@ func (r *Room) run() {
 				r.writeChat(fmt.Sprintf("Player %d: %s", r.players[ram.from], *ram.Chat))
 			}
 
-			// broadcast an update
+			// broadcast updates
 			r.broadcastRoomUpdate()
 			break
 		case tgam := <-r.incomingTriviaActions:
+			fmt.Println("Got TriviaGameAction from a player")
 			switch(r.state) {
 			case Lobby:
 				// team select

@@ -58,7 +58,7 @@ type ErrorWithMessage struct {
 	message string
 }
 
-func ServerErrorHelper(msg string) OutgoingMessage {
+func serverErrorHelper(msg string) OutgoingMessage {
 	tobyte, _ := json.Marshal(ErrorWithMessage{msg})
 	return OutgoingMessage{
 		Type:    ServerError,

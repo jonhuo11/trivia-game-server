@@ -37,11 +37,11 @@ func newHub() *Hub {
 
 func (h *Hub) joinRoom(p *Player, code string) {
 	if p.room != nil {
-		p.send <- ServerErrorHelper("this player is already in a room")
+		p.send <- serverErrorHelper("this player is already in a room")
 		return
 	}
 	if room, in := h.rooms[code]; !in {
-		p.send <- ServerErrorHelper("this room does not exist")
+		p.send <- serverErrorHelper("this room does not exist")
 		return
 	} else {
 		room.mu.Lock()
@@ -49,12 +49,13 @@ func (h *Hub) joinRoom(p *Player, code string) {
 		p.room = room
 		room.mu.Unlock()
 		room.broadcastRoomUpdate()
+		room.broadcastGameUpdate()
 	}
 }
 
 func (h *Hub) createRoom(creator *Player) {
 	if creator.room != nil {
-		creator.send <- ServerErrorHelper("this player is already in a room")
+		creator.send <- serverErrorHelper("this player is already in a room")
 		return
 	}
 	id := uuid.New().String()
@@ -102,7 +103,7 @@ func (h *Hub) run() {
 			case JoinRoom:
 				m := JoinRoomMessage{}
 				if err := json.Unmarshal(message.Content, &m); err != nil {
-					message.From.send <- ServerErrorHelper("Bad format")
+					message.From.send <- serverErrorHelper("Bad format")
 				} else {
 					h.joinRoom(message.From, m.Code)
 				}
@@ -122,16 +123,34 @@ func (h *Hub) run() {
 						nil,
 					}
 					if err := json.Unmarshal(message.Content, &rm); err != nil {
-						message.From.send <- ServerErrorHelper("Bad RoomActionMessage format")
+						message.From.send <- serverErrorHelper("Bad RoomActionMessage format")
 					} else {
 						message.From.room.incomingRoomActions <- rm
 					}
 				} else {
-					message.From.send <- ServerErrorHelper("Not in a room")
+					message.From.send <- serverErrorHelper("Not in a room")
 				}
 				break
 			case GameAction:
 				// related to the trivia gamestate itself
+
+				if message.From.room != nil {
+					gam := TriviaGameActionMessage{
+						ActionMessage{
+							from: message.From,
+						},
+						nil,
+						nil,
+					}
+					if err := json.Unmarshal(message.Content, &gam); err != nil {
+						message.From.send <- serverErrorHelper("Bad TriviaGameActionMessage format")
+
+					} else {
+						message.From.room.incomingTriviaActions <- gam
+					}
+				} else {
+					message.From.send <- serverErrorHelper("Not in a room")
+				}
 				break
 			default:
 				break
