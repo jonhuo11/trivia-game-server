@@ -71,6 +71,7 @@ func (h *Hub) createRoom(creator *Player) {
 	creator.room = newroom
 
 	newroom.broadcastRoomUpdate()
+	newroom.broadcastGameUpdate() // TODO remove this test
 
 	go newroom.run()
 }
