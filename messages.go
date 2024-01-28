@@ -67,6 +67,8 @@ func serverErrorHelper(msg string) OutgoingMessage {
 }
 
 type RoomUpdateMessage struct {
+	// was the room created on this update? used to assign player on frontend as owner
+	Created *bool `json:"created"`
 	Code    string   `json:"code"`
 	Players []string `json:"players"`
 	Chat    []string `json:"chat"`

@@ -22,6 +22,7 @@ type Hub struct {
 	// Unregister requests from clients.
 	unregister chan *Player
 
+	// List of rooms
 	rooms map[string]*Room
 }
 
@@ -45,9 +46,13 @@ func (h *Hub) joinRoom(p *Player, code string) {
 		return
 	} else {
 		room.mu.Lock()
-		room.players[p] = len(room.players)
+
+		room.players[p] = room.playernum
+		room.playernum++
 		p.room = room
+
 		room.mu.Unlock()
+
 		room.broadcastRoomUpdate()
 		room.broadcastGameUpdate()
 	}
@@ -62,6 +67,7 @@ func (h *Hub) createRoom(creator *Player) {
 	newroom := &Room{
 		code:                  id,
 		players:               map[*Player]int{creator: 0},
+		playernum: 1,
 		chat:                  []string{fmt.Sprintf("Welcome to room %s", id)},
 		state:                 Lobby,
 		gamestate:             newTriviaState(),

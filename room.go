@@ -42,8 +42,11 @@ type Room struct {
 
 	code string
 
-	// mapped to the player number within that room
+	// mapped to the player number within that room, player 0 is owner
 	players map[*Player]int
+
+	// the next player number
+	playernum int
 
 	chat []string
 
