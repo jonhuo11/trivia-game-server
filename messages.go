@@ -14,9 +14,9 @@ const (
 	RoomAction PlayerMessageType = 3
 	GameAction PlayerMessageType = 4
 
-	ServerError ServerMessageType = 0
-	RoomUpdate  ServerMessageType = 1
-	TriviaGameUpdate	ServerMessageType = 2
+	ServerError      ServerMessageType = 0
+	RoomUpdate       ServerMessageType = 1
+	TriviaGameUpdate ServerMessageType = 2
 )
 
 type IncomingMessage struct {
@@ -66,20 +66,38 @@ func serverErrorHelper(msg string) OutgoingMessage {
 	}
 }
 
+// outgoing
 type RoomUpdateMessage struct {
 	// was the room created on this update? used to assign player on frontend as owner
 	Created *bool `json:"created"`
-	Code    string   `json:"code"`
+
+	// room code
+	Code string `json:"code"`
+
+	// playerlist TODO make player id/name
 	Players []string `json:"players"`
-	Chat    []string `json:"chat"`
+
+	// chat logs TODO make this a delta, not entire logs
+	Chat []string `json:"chat"`
 }
 
 // outgoing
 type TriviaStateUpdateMessage struct {
-	BlueTeam []string `json:"blueTeam"`
-	RedTeam []string `json:"redTeam"`
-}
+	// list of blue team players
+	BlueTeam *[]string `json:"blueTeam"`
 
+	// list of red team players
+	RedTeam *[]string `json:"redTeam"`
+
+	// limbo (0) or round (1)
+	RoundState int `json:"roundState"`
+
+	// round time remaining, 0 means round ended and await next update packet
+	RoundTimeLeft int `json:"roundTimeLeft"`
+
+	// rounds since game started
+	Round int `json:"round"`
+}
 
 // incoming
 type TriviaGameActionMessage struct {

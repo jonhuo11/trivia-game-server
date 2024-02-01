@@ -13,30 +13,6 @@ const (
 	InGame RoomState = 1
 )
 
-type TriviaState struct {
-	round     int
-	timer     int
-	blue      map[*Player]bool
-	red       map[*Player]bool
-	blueScore int
-	redScore  int
-	question  string
-	answer    string
-}
-
-func newTriviaState () TriviaState {
-	return TriviaState {
-		round: 0,
-		timer: 20,
-		blue: make(map[*Player]bool),
-		red: make(map[*Player]bool),
-		blueScore: 0,
-		redScore: 0,
-		question: "",
-		answer: "",
-	}
-}
-
 type Room struct {
 	mu sync.Mutex
 
@@ -59,9 +35,16 @@ type Room struct {
 	incomingTriviaActions chan TriviaGameActionMessage
 }
 
-// room loop, main game logic here
+// room loop, main logic here
 func (r *Room) run() {
 	for {
+
+		// process game logic first (receive from trivia game updater channel)
+		if r.state == InGame {
+			r.gamestate.run() // game logic
+		}
+
+		// any received updates from clients
 		select {
 		case ram := <-r.incomingRoomActions:
 			//fmt.Println("Room action received")
@@ -74,27 +57,35 @@ func (r *Room) run() {
 			r.broadcastRoomUpdate()
 			break
 		case tgam := <-r.incomingTriviaActions:
-			fmt.Println("Got TriviaGameAction from a player")
-			switch(r.state) {
+
+			// TODO move this into trivia.go
+
+			switch r.state {
 			case Lobby:
-				// team select
-				if tgam.Join != nil {
-					r.joinTeam(tgam.from, *tgam.Join)
+				{
+					// team select
+					if tgam.Join != nil {
+						r.joinTeam(tgam.from, *tgam.Join)
+					}
+					r.broadcastGameUpdate()
+					break
 				}
-				r.broadcastGameUpdate()
-				break
 			case InGame:
-				break
+				{
+					break
+				}
 			default:
 				break
 			}
+
 			break
 		}
 	}
 }
 
+// TODO move this to trivia.go
 // 0 is blue 1 is red
-func (r *Room) joinTeam(player* Player, team int) {
+func (r *Room) joinTeam(player *Player, team int) {
 	r.mu.Lock()
 	if team == 0 {
 		r.gamestate.blue[player] = true
@@ -122,6 +113,7 @@ func (r *Room) writeChat(msg string) {
 	r.mu.Unlock()
 }
 
+// TODO move the logic in this to trivia.go
 // lets clients know about room updates
 func (r *Room) broadcastRoomUpdate() {
 	if r == nil {
@@ -148,7 +140,9 @@ func (r *Room) broadcastRoomUpdate() {
 }
 
 func (r *Room) broadcastGameUpdate() {
-	if r == nil {return}
+	if r == nil {
+		return
+	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -162,13 +156,13 @@ func (r *Room) broadcastGameUpdate() {
 	}
 
 	tsum := TriviaStateUpdateMessage{
-		BlueTeam: blue,
-		RedTeam: red,
+		BlueTeam: &blue,
+		RedTeam:  &red,
 	}
 	str, _ := json.Marshal(tsum)
-	for player := range r.players{
+	for player := range r.players {
 		player.send <- OutgoingMessage{
-			Type: TriviaGameUpdate,
+			Type:    TriviaGameUpdate,
 			Content: str,
 		}
 	}

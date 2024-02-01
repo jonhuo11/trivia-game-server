@@ -67,7 +67,7 @@ func (h *Hub) createRoom(creator *Player) {
 	newroom := &Room{
 		code:                  id,
 		players:               map[*Player]int{creator: 0},
-		playernum: 1,
+		playernum:             1,
 		chat:                  []string{fmt.Sprintf("Welcome to room %s", id)},
 		state:                 Lobby,
 		gamestate:             newTriviaState(),
