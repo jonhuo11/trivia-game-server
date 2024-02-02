@@ -1,18 +1,22 @@
 package main
 
 import (
+	"fmt"
 	"time"
 )
 
 type RoundState int64
 
 const (
-	Limbo RoundState = 0
-	Round RoundState = 1
+	InLimbo RoundState = 0
+	InRound RoundState = 1
 )
 
 // default time per round
 const TriviaRoundTime = 10
+
+// default time between rounds
+const TriviaLimboTime = 5
 
 type TriviaGame struct {
 	// state of the current round, limbo or in round
@@ -48,16 +52,23 @@ type TriviaGame struct {
 	// assume this is always set
 	timerTicker *time.Ticker
 
+	// assume this is always set
+	delayTimer *time.Timer
+
 	// channel for sending updates to be broadcasted
 	outgoingTriviaStateUpdateMessages chan TriviaStateUpdateMessage
+
+	// is in test mode?
+	debugMode bool
 }
 
-func newTriviaState() *TriviaGame {
+func newTriviaGame(debug bool) *TriviaGame {
 	return &TriviaGame{
-		roundState:                        Limbo,
+		roundState:                        InLimbo,
 		round:                             0,
 		timer:                             20,
 		timerTicker:                       time.NewTicker(time.Second),
+		delayTimer:                        time.NewTimer(0),
 		blue:                              make(map[*Player]bool),
 		red:                               make(map[*Player]bool),
 		blueScore:                         0,
@@ -65,6 +76,7 @@ func newTriviaState() *TriviaGame {
 		question:                          "",
 		answer:                            "",
 		outgoingTriviaStateUpdateMessages: make(chan TriviaStateUpdateMessage, 1),
+		debugMode:                         debug,
 	}
 }
 
@@ -75,14 +87,16 @@ func (t *TriviaGame) startGame() {
 
 // one update cycle for the game, send updates to room
 func (t *TriviaGame) run() {
+	defer t.broadcastGameUpdate(false)
 	switch t.roundState {
-	case Round:
+	case InRound:
 		{
 			select {
 			case <-t.timerTicker.C:
-				//fmt.Println("timer")
+				if t.debugMode {
+					fmt.Println("Trivia timerTicker tick")
+				}
 				t.timer--
-				break
 			default:
 				break
 			}
@@ -95,9 +109,15 @@ func (t *TriviaGame) run() {
 
 			break
 		}
-	case Limbo:
+	case InLimbo:
 		{
-			// await updates from clients while in limbo
+			// wait for go to next round
+			select {
+			case <-t.delayTimer.C:
+				t.goToRoundFromLimbo()
+			default:
+				break
+			}
 
 			break
 		}
@@ -106,32 +126,56 @@ func (t *TriviaGame) run() {
 
 // handle incoming player actions
 func (t *TriviaGame) playerAction(tgam TriviaGameActionMessage) {
-	// joining teams
-	if t.roundState == Limbo && tgam.Join != nil {
-		// TODO
+	switch t.roundState {
+	case InLimbo:
+		// joining teams
+		if tgam.Join != nil {
+			if *(tgam.Join) == 0 { // blue
+				t.blue[tgam.from] = true
+				delete(t.red, tgam.from)
+			} else { // red
+				t.red[tgam.from] = true
+				delete(t.blue, tgam.from)
+			}
+			t.broadcastGameUpdate(true)
+		}
+		break
+	case InRound:
+		break
 	}
 }
 
 // picks a new question from the question bank and sets it as the active question
 func (t *TriviaGame) pickNewQuestion(bank interface{}) {
-
+	// TODO
 }
 
-// starts a new round
+// starts a new round and enters round state immediately
 func (t *TriviaGame) goToRoundFromLimbo() {
+	if t.roundState != InLimbo {
+		return
+	}
 	t.round++
 	t.timer = TriviaRoundTime
 	t.timerTicker.Reset(time.Second)
-	t.roundState = Round
+	t.roundState = InRound
 }
 
-// ends round
+// ends round and enters limbo state immediately
 func (t *TriviaGame) endRoundAndGoToLimbo() {
+	if t.roundState != InRound {
+		return
+	}
 	t.timerTicker.Stop()
-	t.roundState = Limbo
+	t.delayTimer.Reset(time.Second * TriviaLimboTime) // exit Limbo and start new round after X sec
+	t.roundState = InLimbo
 }
 
 func (t *TriviaGame) broadcastGameUpdate(updateTeams bool) {
+	if t.debugMode {
+		return
+	}
+
 	var tsum = TriviaStateUpdateMessage{}
 	if updateTeams {
 		blue := []string{}
@@ -147,7 +191,10 @@ func (t *TriviaGame) broadcastGameUpdate(updateTeams bool) {
 		tsum.RedTeam = &red
 	}
 
-	// TODO calculate which updates to broadcast
+	// set state info
+	tsum.RoundState = int(t.roundState)
+	tsum.Round = t.round
+	tsum.RoundTimeLeft = t.timer
 
 	t.outgoingTriviaStateUpdateMessages <- tsum
 }

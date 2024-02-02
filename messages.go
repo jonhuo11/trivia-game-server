@@ -8,11 +8,14 @@ type PlayerMessageType int
 type ServerMessageType int
 
 const (
+	// incoming message types
 	Connect    PlayerMessageType = 0
 	JoinRoom   PlayerMessageType = 1
 	CreateRoom PlayerMessageType = 2
 	RoomAction PlayerMessageType = 3
 	GameAction PlayerMessageType = 4
+
+	// outgoing message types
 
 	ServerError      ServerMessageType = 0
 	RoomUpdate       ServerMessageType = 1
@@ -20,7 +23,7 @@ const (
 )
 
 type IncomingMessage struct {
-	From    *Player
+	from    *Player
 	Type    PlayerMessageType `json:"type"`
 	Content []byte            `json:"content"`
 }
@@ -52,6 +55,12 @@ type RoomActionMessage struct {
 
 	// new chat message
 	Chat *string `json:"chat"`
+
+	// should try to start the game?
+	Start *bool `json:"start"`
+
+	// makes the sender leave the room
+	Leave *bool `json:"leave"`
 }
 
 type ErrorWithMessage struct {
@@ -74,7 +83,7 @@ type RoomUpdateMessage struct {
 	// room code
 	Code string `json:"code"`
 
-	// playerlist TODO make player id/name
+	// playerlist TODO make player id/name and make this optional
 	Players []string `json:"players"`
 
 	// chat logs TODO make this a delta, not entire logs

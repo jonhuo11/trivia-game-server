@@ -33,10 +33,12 @@ var upgrader = websocket.Upgrader{
 	WriteBufferSize: 1024,
 }
 
-// Player is a middleman between the websocket connection and the hub.
+// Player is a middleman between the websocket connection and the
 type Player struct {
+	// in game name
 	name string
 
+	// reference to the hub
 	hub *Hub
 
 	// The websocket connection.
@@ -45,10 +47,11 @@ type Player struct {
 	// Buffered channel of outbound messages.
 	send chan OutgoingMessage
 
+	// room the player belongs to
 	room *Room
 }
 
-// readPump pumps messages from the websocket connection to the hub.
+// readPump pumps messages from the websocket connection to the
 //
 // The application runs readPump in a per-connection goroutine. The application
 // ensures that there is at most one reader on a connection by executing all
@@ -70,7 +73,7 @@ func (p *Player) readPump() {
 			break
 		}
 		parsed := IncomingMessage{
-			From: p,
+			from: p,
 		}
 		if err := json.Unmarshal(message, &parsed); err != nil {
 			fmt.Println(p.conn.RemoteAddr(), "bad message format", string(message))

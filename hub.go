@@ -45,14 +45,7 @@ func (h *Hub) joinRoom(p *Player, code string) {
 		p.send <- serverErrorHelper("this room does not exist")
 		return
 	} else {
-		room.mu.Lock()
-
-		room.players[p] = room.playernum
-		room.playernum++
-		p.room = room
-
-		room.mu.Unlock()
-
+		room.join(p)
 		room.broadcastRoomUpdate()
 		//room.broadcastGameUpdate()
 	}
@@ -70,7 +63,7 @@ func (h *Hub) createRoom(creator *Player) {
 		playernum:             1,
 		chat:                  []string{fmt.Sprintf("Welcome to room %s", id)},
 		state:                 Lobby,
-		game:                  newTriviaState(),
+		game:                  newTriviaGame(false),
 		incomingRoomActions:   make(chan RoomActionMessage),
 		incomingTriviaActions: make(chan TriviaGameActionMessage),
 	}
@@ -78,9 +71,12 @@ func (h *Hub) createRoom(creator *Player) {
 	creator.room = newroom
 
 	newroom.broadcastRoomUpdate()
-	//newroom.broadcastGameUpdate() // TODO remove this test
 
-	go newroom.run()
+	go func() { // TODO add stopper
+		for {
+			newroom.run()
+		}
+	}()
 }
 
 func (h *Hub) run() {
@@ -91,10 +87,11 @@ func (h *Hub) run() {
 		case player := <-h.unregister:
 			if player.room != nil {
 				if _, in := h.rooms[player.room.code]; in {
-					playerroom := h.rooms[player.room.code]
-					playerroom.writeChat(fmt.Sprintf("Player %d left the room", playerroom.players[player]))
-					playerroom.removePlayer(player)
-					playerroom.broadcastRoomUpdate()
+					ram := RoomActionMessage{}
+					ram.from = player
+					t := true
+					ram.Leave = &t
+					h.rooms[player.room.code].incomingRoomActions <- ram
 				}
 			}
 			delete(h.players, player)
@@ -104,58 +101,49 @@ func (h *Hub) run() {
 		case message := <-h.incoming:
 			switch message.Type {
 			case Connect:
-				//fmt.Println("New player connected from ", message.From.conn.RemoteAddr())
+				//fmt.Println("New player connected from ", message.from.conn.RemoteAddr())
 				break
 			case JoinRoom:
 				m := JoinRoomMessage{}
 				if err := json.Unmarshal(message.Content, &m); err != nil {
-					message.From.send <- serverErrorHelper("Bad format")
+					message.from.send <- serverErrorHelper("Bad format")
 				} else {
-					h.joinRoom(message.From, m.Code)
+					h.joinRoom(message.from, m.Code)
 				}
 				break
 			case CreateRoom:
-				h.createRoom(message.From)
+				h.createRoom(message.from)
 				break
 			case RoomAction:
 				// RoomAction is join/leave room, switch team, send chat message
 
 				// parse the message content as a room message and send to room handler
-				if message.From.room != nil {
-					rm := RoomActionMessage{
-						ActionMessage{
-							from: message.From,
-						},
-						nil,
-					}
+				if message.from.room != nil {
+					rm := RoomActionMessage{}
+					rm.from = message.from
 					if err := json.Unmarshal(message.Content, &rm); err != nil {
-						message.From.send <- serverErrorHelper("Bad RoomActionMessage format")
+						message.from.send <- serverErrorHelper("Bad RoomActionMessage format")
 					} else {
-						message.From.room.incomingRoomActions <- rm
+						message.from.room.incomingRoomActions <- rm
 					}
 				} else {
-					message.From.send <- serverErrorHelper("Not in a room")
+					message.from.send <- serverErrorHelper("Not in a room")
 				}
 				break
 			case GameAction:
 				// related to the trivia gamestate itself
 
-				if message.From.room != nil {
-					gam := TriviaGameActionMessage{
-						ActionMessage{
-							from: message.From,
-						},
-						nil,
-						nil,
-					}
+				if message.from.room != nil {
+					gam := TriviaGameActionMessage{}
+					gam.from = message.from
 					if err := json.Unmarshal(message.Content, &gam); err != nil {
-						message.From.send <- serverErrorHelper("Bad TriviaGameActionMessage format")
+						message.from.send <- serverErrorHelper("Bad TriviaGameActionMessage format")
 
 					} else {
-						message.From.room.incomingTriviaActions <- gam
+						message.from.room.incomingTriviaActions <- gam
 					}
 				} else {
-					message.From.send <- serverErrorHelper("Not in a room")
+					message.from.send <- serverErrorHelper("Not in a room")
 				}
 				break
 			default:
