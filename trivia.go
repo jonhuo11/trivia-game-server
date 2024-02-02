@@ -54,16 +54,16 @@ type TriviaGame struct {
 
 func newTriviaState() *TriviaGame {
 	return &TriviaGame{
-		roundState: Limbo,
-		round:      0,
-		timer:      20,
-		timerTicker: time.NewTicker(time.Second),
-		blue:       make(map[*Player]bool),
-		red:        make(map[*Player]bool),
-		blueScore:  0,
-		redScore:   0,
-		question:   "",
-		answer:     "",
+		roundState:                        Limbo,
+		round:                             0,
+		timer:                             20,
+		timerTicker:                       time.NewTicker(time.Second),
+		blue:                              make(map[*Player]bool),
+		red:                               make(map[*Player]bool),
+		blueScore:                         0,
+		redScore:                          0,
+		question:                          "",
+		answer:                            "",
 		outgoingTriviaStateUpdateMessages: make(chan TriviaStateUpdateMessage, 1),
 	}
 }
@@ -130,7 +130,6 @@ func (t *TriviaGame) endRoundAndGoToLimbo() {
 	t.timerTicker.Stop()
 	t.roundState = Limbo
 }
-
 
 func (t *TriviaGame) broadcastGameUpdate(updateTeams bool) {
 	var tsum = TriviaStateUpdateMessage{}

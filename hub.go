@@ -70,7 +70,7 @@ func (h *Hub) createRoom(creator *Player) {
 		playernum:             1,
 		chat:                  []string{fmt.Sprintf("Welcome to room %s", id)},
 		state:                 Lobby,
-		game:             newTriviaState(),
+		game:                  newTriviaState(),
 		incomingRoomActions:   make(chan RoomActionMessage),
 		incomingTriviaActions: make(chan TriviaGameActionMessage),
 	}

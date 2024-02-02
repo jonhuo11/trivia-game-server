@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-func TestTimerEndsRound (t *testing.T) {
+func TestTimerEndsRound(t *testing.T) {
 	trivia := newTriviaState()
 	trivia.goToRoundFromLimbo()
 	done := make(chan bool, 1)
@@ -28,4 +28,3 @@ func TestTimerEndsRound (t *testing.T) {
 		t.Errorf("State is not Limbo")
 	}
 }
-

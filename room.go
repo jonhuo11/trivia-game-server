@@ -46,6 +46,8 @@ func (r *Room) run() {
 				r.writeChat(fmt.Sprintf("Player %d: %s", r.players[ram.from], *ram.Chat))
 			}
 
+			// TODO start game action handler here
+
 			// broadcast updates
 			r.broadcastRoomUpdate()
 		case tgam := <-r.incomingTriviaActions:
@@ -56,20 +58,22 @@ func (r *Room) run() {
 			for p := range r.players {
 				str, _ := json.Marshal(tsum)
 				p.send <- OutgoingMessage{
-					Type: TriviaGameUpdate,
+					Type:    TriviaGameUpdate,
 					Content: str,
 				}
 			}
 		default:
 			// game logic
+			if r.state == InGame {
+				r.game.run() // one game loop
+			}
 		}
 	}
 }
 
-
 // launches trivia game
-func (r *Room) startGame () {
-	
+func (r *Room) startGame() {
+	// TODO
 }
 
 func (r *Room) removePlayer(player *Player) {
@@ -109,4 +113,3 @@ func (r *Room) broadcastRoomUpdate() {
 		}
 	}
 }
-
