@@ -54,7 +54,7 @@ func (h *Hub) joinRoom(p *Player, code string) {
 		room.mu.Unlock()
 
 		room.broadcastRoomUpdate()
-		room.broadcastGameUpdate()
+		//room.broadcastGameUpdate()
 	}
 }
 
@@ -70,7 +70,7 @@ func (h *Hub) createRoom(creator *Player) {
 		playernum:             1,
 		chat:                  []string{fmt.Sprintf("Welcome to room %s", id)},
 		state:                 Lobby,
-		gamestate:             newTriviaState(),
+		game:             newTriviaState(),
 		incomingRoomActions:   make(chan RoomActionMessage),
 		incomingTriviaActions: make(chan TriviaGameActionMessage),
 	}
@@ -78,7 +78,7 @@ func (h *Hub) createRoom(creator *Player) {
 	creator.room = newroom
 
 	newroom.broadcastRoomUpdate()
-	newroom.broadcastGameUpdate() // TODO remove this test
+	//newroom.broadcastGameUpdate() // TODO remove this test
 
 	go newroom.run()
 }
@@ -99,12 +99,12 @@ func (h *Hub) run() {
 			}
 			delete(h.players, player)
 			close(player.send)
-			fmt.Println("Unregistered client and removed from room")
+			//fmt.Println("Unregistered client and removed from room")
 			break
 		case message := <-h.incoming:
 			switch message.Type {
 			case Connect:
-				fmt.Println("New player connected from ", message.From.conn.RemoteAddr())
+				//fmt.Println("New player connected from ", message.From.conn.RemoteAddr())
 				break
 			case JoinRoom:
 				m := JoinRoomMessage{}
