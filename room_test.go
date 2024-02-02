@@ -7,7 +7,6 @@ import (
 func TestLeave(t *testing.T) {
 	room := newRoom(true)
 	room.startGame()
-	
 
 	// join player to the room
 	pl := Player{}

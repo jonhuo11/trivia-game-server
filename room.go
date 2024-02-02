@@ -51,7 +51,7 @@ func newRoom(debug bool) Room {
 		game:                  newTriviaGame(debug),
 		incomingRoomActions:   make(chan RoomActionMessage, 1),
 		incomingTriviaActions: make(chan TriviaGameActionMessage, 1),
-		debugMode: debug,
+		debugMode:             debug,
 	}
 }
 
@@ -85,7 +85,7 @@ func (r *Room) run() {
 		}
 
 		// broadcast updates
-		r.broadcastRoomUpdate()
+		r.broadcastRoomUpdate(false)
 	case tgam := <-r.incomingTriviaActions:
 		// route incoming game actions to the trivia handler
 		// TODO add error return channel
@@ -135,12 +135,13 @@ func (r *Room) writeChat(msg string) {
 }
 
 // lets clients know about room updates
-func (r *Room) broadcastRoomUpdate() {
+func (r *Room) broadcastRoomUpdate(created bool) {
 	if r.debugMode {
 		return
 	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
+
 	playerlist := []string{}
 	for p := range r.players {
 		playerlist = append(playerlist, p.name)
@@ -149,6 +150,10 @@ func (r *Room) broadcastRoomUpdate() {
 		Code:    r.code,
 		Players: playerlist,
 		Chat:    r.chat,
+	}
+	if created {
+		tmp := true
+		rum.Created = &tmp
 	}
 	str, _ := json.Marshal(rum)
 	for player := range r.players {

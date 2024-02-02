@@ -46,8 +46,8 @@ func (h *Hub) joinRoom(p *Player, code string) {
 		return
 	} else {
 		room.join(p)
-		room.broadcastRoomUpdate()
-		//room.broadcastGameUpdate()
+		room.broadcastRoomUpdate(false)
+		room.game.broadcastGameUpdate(true)
 	}
 }
 
@@ -57,6 +57,7 @@ func (h *Hub) createRoom(creator *Player) {
 		return
 	}
 	id := uuid.New().String()
+	// TODO use newRoom to create room
 	newroom := &Room{
 		code:                  id,
 		players:               map[*Player]int{creator: 0},
@@ -70,7 +71,7 @@ func (h *Hub) createRoom(creator *Player) {
 	h.rooms[id] = newroom
 	creator.room = newroom
 
-	newroom.broadcastRoomUpdate()
+	newroom.broadcastRoomUpdate(true)
 
 	go func() { // TODO add stopper
 		for {
