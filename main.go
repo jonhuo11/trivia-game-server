@@ -11,6 +11,11 @@ import (
 	"github.com/google/uuid"
 )
 
+func boolPtr(v bool) *bool {
+	x := v
+	return &x
+}
+
 var addr = flag.String("addr", ":9100", "http service address")
 
 func serveHome(w http.ResponseWriter, r *http.Request) {
@@ -38,7 +43,7 @@ func serveWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 		name: fmt.Sprintf("Player %v", uuid.New().String()),
 		hub:  hub,
 		conn: conn,
-		send: make(chan OutgoingMessage, 256),
+		send: make(chan OutgoingMessage, 512), // buffer the send channel by 512 messages to prevent panic overflow
 	}
 	player.hub.register <- player
 

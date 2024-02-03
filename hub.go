@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"github.com/google/uuid"
 )
@@ -36,6 +35,7 @@ func newHub() *Hub {
 	}
 }
 
+// async safe join room
 func (h *Hub) joinRoom(p *Player, code string) {
 	if p.room != nil {
 		p.send <- serverErrorHelper("this player is already in a room")
@@ -45,16 +45,10 @@ func (h *Hub) joinRoom(p *Player, code string) {
 		p.send <- serverErrorHelper("this room does not exist")
 		return
 	} else {
-		room.mu.Lock()
-
-		room.players[p] = room.playernum
-		room.playernum++
-		p.room = room
-
-		room.mu.Unlock()
-
-		room.broadcastRoomUpdate()
-		room.broadcastGameUpdate()
+		ram := RoomActionMessage{}
+		ram.from = p
+		ram.Join = boolPtr(true)
+		room.incomingRoomActions <- ram // will join on next update
 	}
 }
 
@@ -64,23 +58,18 @@ func (h *Hub) createRoom(creator *Player) {
 		return
 	}
 	id := uuid.New().String()
-	newroom := &Room{
-		code:                  id,
-		players:               map[*Player]int{creator: 0},
-		playernum: 1,
-		chat:                  []string{fmt.Sprintf("Welcome to room %s", id)},
-		state:                 Lobby,
-		gamestate:             newTriviaState(),
-		incomingRoomActions:   make(chan RoomActionMessage),
-		incomingTriviaActions: make(chan TriviaGameActionMessage),
-	}
+	newroom := newRoom(id, false)
+	newroom.join(creator)
 	h.rooms[id] = newroom
 	creator.room = newroom
 
-	newroom.broadcastRoomUpdate()
-	newroom.broadcastGameUpdate() // TODO remove this test
+	newroom.broadcastRoomUpdate(true)
 
-	go newroom.run()
+	go func() { // TODO add stopper
+		for {
+			newroom.run()
+		}
+	}()
 }
 
 func (h *Hub) run() {
@@ -91,71 +80,60 @@ func (h *Hub) run() {
 		case player := <-h.unregister:
 			if player.room != nil {
 				if _, in := h.rooms[player.room.code]; in {
-					playerroom := h.rooms[player.room.code]
-					playerroom.writeChat(fmt.Sprintf("Player %d left the room", playerroom.players[player]))
-					playerroom.removePlayer(player)
-					playerroom.broadcastRoomUpdate()
+					// its ok to do this as player.send is buffered by 256 msges
+					player.room.removePlayer(player)
 				}
 			}
 			delete(h.players, player)
 			close(player.send)
-			fmt.Println("Unregistered client and removed from room")
+			//fmt.Println("Unregistered client and removed from room")
 			break
 		case message := <-h.incoming:
 			switch message.Type {
 			case Connect:
-				fmt.Println("New player connected from ", message.From.conn.RemoteAddr())
+				//fmt.Println("New player connected from ", message.from.conn.RemoteAddr())
 				break
 			case JoinRoom:
 				m := JoinRoomMessage{}
 				if err := json.Unmarshal(message.Content, &m); err != nil {
-					message.From.send <- serverErrorHelper("Bad format")
+					message.from.send <- serverErrorHelper("Bad format")
 				} else {
-					h.joinRoom(message.From, m.Code)
+					h.joinRoom(message.from, m.Code)
 				}
 				break
 			case CreateRoom:
-				h.createRoom(message.From)
+				h.createRoom(message.from)
 				break
 			case RoomAction:
 				// RoomAction is join/leave room, switch team, send chat message
 
 				// parse the message content as a room message and send to room handler
-				if message.From.room != nil {
-					rm := RoomActionMessage{
-						ActionMessage{
-							from: message.From,
-						},
-						nil,
-					}
+				if message.from.room != nil {
+					rm := RoomActionMessage{}
+					rm.from = message.from
 					if err := json.Unmarshal(message.Content, &rm); err != nil {
-						message.From.send <- serverErrorHelper("Bad RoomActionMessage format")
+						message.from.send <- serverErrorHelper("Bad RoomActionMessage format")
 					} else {
-						message.From.room.incomingRoomActions <- rm
+						message.from.room.incomingRoomActions <- rm
 					}
 				} else {
-					message.From.send <- serverErrorHelper("Not in a room")
+					message.from.send <- serverErrorHelper("Not in a room")
 				}
 				break
 			case GameAction:
 				// related to the trivia gamestate itself
 
-				if message.From.room != nil {
-					gam := TriviaGameActionMessage{
-						ActionMessage{
-							from: message.From,
-						},
-						nil,
-						nil,
-					}
+				if message.from.room != nil {
+					gam := TriviaGameActionMessage{}
+					gam.from = message.from
 					if err := json.Unmarshal(message.Content, &gam); err != nil {
-						message.From.send <- serverErrorHelper("Bad TriviaGameActionMessage format")
+						message.from.send <- serverErrorHelper("Bad TriviaGameActionMessage format")
 
 					} else {
-						message.From.room.incomingTriviaActions <- gam
+						message.from.room.incomingTriviaActions <- gam
 					}
 				} else {
-					message.From.send <- serverErrorHelper("Not in a room")
+					message.from.send <- serverErrorHelper("Not in a room")
 				}
 				break
 			default:

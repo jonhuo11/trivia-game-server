@@ -2,8 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
-	"log"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -33,10 +31,15 @@ var upgrader = websocket.Upgrader{
 	WriteBufferSize: 1024,
 }
 
-// Player is a middleman between the websocket connection and the hub.
+// Player is a middleman between the websocket connection and the
 type Player struct {
+	// id
 	name string
 
+	// room name
+	roomname string
+
+	// reference to the hub
 	hub *Hub
 
 	// The websocket connection.
@@ -45,10 +48,11 @@ type Player struct {
 	// Buffered channel of outbound messages.
 	send chan OutgoingMessage
 
+	// room the player belongs to
 	room *Room
 }
 
-// readPump pumps messages from the websocket connection to the hub.
+// readPump pumps messages from the websocket connection to the
 //
 // The application runs readPump in a per-connection goroutine. The application
 // ensures that there is at most one reader on a connection by executing all
@@ -65,15 +69,15 @@ func (p *Player) readPump() {
 		_, message, err := p.conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				log.Printf("Close error: %v", err)
+				//log.Printf("Close error: %v", err)
 			}
 			break
 		}
 		parsed := IncomingMessage{
-			From: p,
+			from: p,
 		}
 		if err := json.Unmarshal(message, &parsed); err != nil {
-			fmt.Println(p.conn.RemoteAddr(), "bad message format", string(message))
+			//fmt.Println(p.conn.RemoteAddr(), "bad message format", string(message))
 
 		}
 		//fmt.Println(string(message), content)
@@ -115,7 +119,7 @@ func (p *Player) writePump() {
 			}
 			tobyte, err := json.Marshal(arr)
 			if err != nil {
-				fmt.Println("Error marshalling", err)
+				//fmt.Println("Error marshalling", err)
 				em, _ := json.Marshal(OutgoingMessage{
 					Type:    ServerError,
 					Content: []byte("{}"),

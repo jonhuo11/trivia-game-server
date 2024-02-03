@@ -3,43 +3,10 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"sync"
 )
-
-type RoomState int64
-
-const (
-	Lobby  RoomState = 0
-	InGame RoomState = 1
-)
-
-type TriviaState struct {
-	round     int
-	timer     int
-	blue      map[*Player]bool
-	red       map[*Player]bool
-	blueScore int
-	redScore  int
-	question  string
-	answer    string
-}
-
-func newTriviaState () TriviaState {
-	return TriviaState {
-		round: 0,
-		timer: 20,
-		blue: make(map[*Player]bool),
-		red: make(map[*Player]bool),
-		blueScore: 0,
-		redScore: 0,
-		question: "",
-		answer: "",
-	}
-}
 
 type Room struct {
-	mu sync.Mutex
-
+	// room code
 	code string
 
 	// mapped to the player number within that room, player 0 is owner
@@ -48,95 +15,151 @@ type Room struct {
 	// the next player number
 	playernum int
 
+	// chat logs
 	chat []string
 
-	state RoomState
+	// room + game are closely related, no need for game's own goroutine. Room will control game
+	game *TriviaGame
 
-	gamestate TriviaState
-
+	// client actions for room (chat, join)
 	incomingRoomActions chan RoomActionMessage
 
+	// client actions for game (teams, voting, etc)
 	incomingTriviaActions chan TriviaGameActionMessage
+
+	// is debugMode
+	debugMode bool
 }
 
-// room loop, main game logic here
+// room creator helper
+func newRoom(id string, debug bool) *Room {
+	r := Room{
+		players:               make(map[*Player]int),
+		incomingRoomActions:   make(chan RoomActionMessage, 1),
+		incomingTriviaActions: make(chan TriviaGameActionMessage, 1),
+		debugMode:             debug,
+		code:                  id,
+		chat:                  []string{},
+	}
+	g := newTriviaGame(r.broadcastGameUpdate, debug)
+	r.game = g
+	return &r
+}
+
+// room loop, main logic here
 func (r *Room) run() {
-	for {
-		select {
-		case ram := <-r.incomingRoomActions:
-			//fmt.Println("Room action received")
-			// chat?
-			if ram.Chat != nil {
-				r.writeChat(fmt.Sprintf("Player %d: %s", r.players[ram.from], *ram.Chat))
-			}
-
-			// broadcast updates
-			r.broadcastRoomUpdate()
-			break
-		case tgam := <-r.incomingTriviaActions:
-			fmt.Println("Got TriviaGameAction from a player")
-			switch(r.state) {
-			case Lobby:
-				// team select
-				if tgam.Join != nil {
-					r.joinTeam(tgam.from, *tgam.Join)
-				}
-				r.broadcastGameUpdate()
-				break
-			case InGame:
-				break
-			default:
-				break
-			}
-			break
+	/*
+		Blocks calculations until a signal is detected. Signals are:
+		1. Incoming room/game action
+		2. Outgoing game update
+		3. Round timer
+	*/
+	select {
+	case ram := <-r.incomingRoomActions:
+		// chat?
+		if ram.Chat != nil {
+			r.writeChat(fmt.Sprintf("%s: %s", ram.from.roomname, *ram.Chat))
 		}
+
+		// only the owner can start new games
+		if ram.Start != nil {
+			v, ok := r.players[ram.from]
+
+			if r.game.state == InRound {
+				r.sendErrorTo(ram.from, "Game already started")
+			} else if ok && v == 0 {
+				r.startGame()
+			} else {
+				r.sendErrorTo(ram.from, "Only the owner can start a match")
+			}
+		}
+
+		gameUpdate := false
+		// join the room
+		if ram.Join != nil && *(ram.Join) {
+			r.join(ram.from)
+			gameUpdate = true
+		}
+
+		// leave the room
+		if ram.Leave != nil && *(ram.Leave) {
+			r.removePlayer(ram.from)
+			gameUpdate = true
+		}
+
+		// broadcast updates
+		r.broadcastRoomUpdate(false)
+
+		if gameUpdate {
+			r.game.broadcastGameUpdate(true)
+		}
+	case tgam := <-r.incomingTriviaActions:
+		// route incoming game actions to the trivia handler
+		// TODO add error return channel
+		r.game.actionHandlerWithBroadcast(&tgam, nil)
+	case <-r.game.timer.C:
+		// timer went off, reroute back to game handler
+		signal := TriviaGameTimerAlert
+		r.game.actionHandlerWithBroadcast(nil, &signal)
 	}
 }
 
-// 0 is blue 1 is red
-func (r *Room) joinTeam(player* Player, team int) {
-	r.mu.Lock()
-	if team == 0 {
-		r.gamestate.blue[player] = true
-		delete(r.gamestate.red, player)
-	} else {
-		r.gamestate.red[player] = true
-		delete(r.gamestate.blue, player)
+// send error to player
+func (r *Room) sendErrorTo(p *Player, msg string) {
+	if r.debugMode {
+		return
 	}
-	r.mu.Unlock()
+	p.send <- serverErrorHelper(msg)
 }
 
+// launches trivia game
+func (r *Room) startGame() {
+	r.game.startGame()
+	r.writeChat("Starting new game...")
+}
+
+// joins a player to the room
+func (r *Room) join(p *Player) {
+	r.players[p] = r.playernum
+	r.playernum++
+	p.room = r
+	p.roomname = fmt.Sprintf("Player %d", r.players[p])
+}
+
+// remove player from room and also game team
 func (r *Room) removePlayer(player *Player) {
-	r.mu.Lock()
 	if _, in := r.players[player]; in {
 		player.room = nil
 		delete(r.players, player)
+
+		delete(r.game.blue, player)
+		delete(r.game.red, player)
 	}
-	r.mu.Unlock()
 }
 
 func (r *Room) writeChat(msg string) {
-	r.mu.Lock()
 	r.chat = append(r.chat, msg)
 	//fmt.Println(r.chat)
-	r.mu.Unlock()
 }
 
 // lets clients know about room updates
-func (r *Room) broadcastRoomUpdate() {
-	if r == nil {
+func (r *Room) broadcastRoomUpdate(created bool) {
+	if r.debugMode {
 		return
 	}
-	r.mu.Lock()
-	defer r.mu.Unlock()
+
 	playerlist := []string{}
 	for p := range r.players {
-		playerlist = append(playerlist, p.name)
+		playerlist = append(playerlist, p.roomname)
 	}
 	rum := RoomUpdateMessage{
 		Code:    r.code,
 		Players: playerlist,
 		Chat:    r.chat,
+	}
+	if created {
+		tmp := true
+		rum.Created = &tmp
 	}
 	str, _ := json.Marshal(rum)
 	for player := range r.players {
@@ -147,28 +170,16 @@ func (r *Room) broadcastRoomUpdate() {
 	}
 }
 
-func (r *Room) broadcastGameUpdate() {
-	if r == nil {return}
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	blue := []string{}
-	red := []string{}
-	for p := range r.gamestate.blue {
-		blue = append(blue, p.name)
-	}
-	for p := range r.gamestate.red {
-		red = append(red, p.name)
+// lets clients know about game updates
+func (r *Room) broadcastGameUpdate(tsum TriviaStateUpdateMessage) {
+	if r.debugMode {
+		return
 	}
 
-	tsum := TriviaStateUpdateMessage{
-		BlueTeam: blue,
-		RedTeam: red,
-	}
-	str, _ := json.Marshal(tsum)
-	for player := range r.players{
-		player.send <- OutgoingMessage{
-			Type: TriviaGameUpdate,
+	for p := range r.players {
+		str, _ := json.Marshal(tsum)
+		p.send <- OutgoingMessage{
+			Type:    TriviaGameUpdate,
 			Content: str,
 		}
 	}
