@@ -18,7 +18,7 @@ type Room struct {
 	// chat logs
 	chat []string
 
-	// room + game are closely related, no need for game's own goroutine
+	// room + game are closely related, no need for game's own goroutine. Room will control game
 	game *TriviaGame
 
 	// client actions for room (chat, join)
@@ -39,7 +39,7 @@ func newRoom(id string, debug bool) *Room {
 		incomingTriviaActions: make(chan TriviaGameActionMessage, 1),
 		debugMode:             debug,
 		code:                  id,
-		chat: []string{},
+		chat:                  []string{},
 	}
 	g := newTriviaGame(r.broadcastGameUpdate, debug)
 	r.game = g
@@ -96,11 +96,11 @@ func (r *Room) run() {
 	case tgam := <-r.incomingTriviaActions:
 		// route incoming game actions to the trivia handler
 		// TODO add error return channel
-		r.game.actionHandler(&tgam, nil)
+		r.game.actionHandlerWithBroadcast(&tgam, nil)
 	case <-r.game.timer.C:
 		// timer went off, reroute back to game handler
 		signal := TriviaGameTimerAlert
-		r.game.actionHandler(nil, &signal)
+		r.game.actionHandlerWithBroadcast(nil, &signal)
 	}
 }
 

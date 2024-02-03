@@ -22,12 +22,14 @@ const (
 	TriviaGameUpdate ServerMessageType = 2
 )
 
+// raw from clients
 type IncomingMessage struct {
 	from    *Player
 	Type    PlayerMessageType `json:"type"`
 	Content []byte            `json:"content"`
 }
 
+// raw outgoing
 type OutgoingMessage struct {
 	Type    ServerMessageType `json:"type"`
 	Content []byte            `json:"content"`
@@ -59,23 +61,16 @@ type RoomActionMessage struct {
 	// should try to start the game?
 	Start *bool `json:"start"`
 
-	// join the room? TODO make this the primary way to join rooms
+	// join the room? gets rerouted from JoinRoomMessage
 	Join *bool `json:"join"`
 
 	// makes the sender leave the room
 	Leave *bool `json:"leave"`
 }
 
+// outgoing
 type ErrorWithMessage struct {
 	message string
-}
-
-func serverErrorHelper(msg string) OutgoingMessage {
-	tobyte, _ := json.Marshal(ErrorWithMessage{msg})
-	return OutgoingMessage{
-		Type:    ServerError,
-		Content: tobyte,
-	}
 }
 
 // outgoing
@@ -101,14 +96,14 @@ type TriviaStateUpdateMessage struct {
 	// list of red team players
 	RedTeam *[]string `json:"redTeam"`
 
-	// limbo (0) or round (1)
+	// limbo (0), round(1), lobby(2)
 	State int `json:"state"`
 
-	// total round time
-	RoundTime int `json:"roundTime"`
+	// round time, send at start
+	RoundTime *int `json:"roundTime"`
 
-	// total limbo time
-	LimboTime int `json:"limboTime"`
+	// limbo time, sent at start
+	LimboTime *int `json:"limboTime"`
 
 	// rounds since game started
 	Round int `json:"round"`
@@ -125,6 +120,17 @@ type TriviaGameActionMessage struct {
 	Guess *string `json:"guess"`
 }
 
+// signals for internal messaging between goroutines
 type InternalSignal int64
 
+// alert Room that Trivia round timer went off
 const TriviaGameTimerAlert InternalSignal = 0
+
+// generate a server error message
+func serverErrorHelper(msg string) OutgoingMessage {
+	tobyte, _ := json.Marshal(ErrorWithMessage{msg})
+	return OutgoingMessage{
+		Type:    ServerError,
+		Content: tobyte,
+	}
+}

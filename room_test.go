@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"testing"
 )
 
@@ -54,5 +55,27 @@ func TestLeave(t *testing.T) {
 	if len(room.players) != 0 || len(room.game.blue) != 0 || len(room.game.red) != 0 {
 		t.Errorf("Player list should be empty")
 	}
+
+}
+
+func TestRoundsRotateFromRoundToLimbo(t *testing.T) {
+	room := newRoom("test", true)
+	pl := &Player{}
+	room.join(pl)
+	room.startGame()
+	if room.game.state != InRound {
+		t.Fatalf("Should be in Round before starting flip flop test")
+	}
+	fmt.Println("Waiting for round timer...")
+	room.run() //  go until round timer, should switch to limbo
+	if room.game.state != InLimbo {
+		t.Fatalf("Did not go to Limbo after timer went off")
+	}
+	fmt.Println("Waiting for limbo timer...")
+	room.run() //  go until round timer, should switch to round
+	if room.game.state != InRound {
+		t.Fatalf("Did not go to Round after timer went off")
+	}
+	fmt.Println("Finished 1 round to limbo rotation")
 
 }

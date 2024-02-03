@@ -82,25 +82,26 @@ func newTriviaGame(broadcaster func(TriviaStateUpdateMessage), debug bool) *Triv
 
 // reset and start game
 func (t *TriviaGame) startGame() {
-	t.state = InRound
 	t.round = 0
 	t.blueScore = 0
 	t.redScore = 0
 	t.question = ""
 	t.answer = ""
+	t.state = InLimbo
 	t.goToRoundFromLimbo()
 }
 
 /*
 Handle incoming player actions and rerouted actions, always runs after the run() cycle
 Only 1 action may execute per call
+Also handles broadcasting after action completed
 */
-func (t *TriviaGame) actionHandler(tgam *TriviaGameActionMessage, is *InternalSignal) {
+func (t *TriviaGame) actionHandlerWithBroadcast(tgam *TriviaGameActionMessage, is *InternalSignal) {
 	switch t.state {
 	case InLimbo:
 		// timer to switch to round
 		if is != nil && *is == TriviaGameTimerAlert {
-			t.goToLimboFromRound()
+			t.goToRoundFromLimbo()
 			t.broadcastGameUpdate(false)
 			return
 		}
@@ -108,7 +109,7 @@ func (t *TriviaGame) actionHandler(tgam *TriviaGameActionMessage, is *InternalSi
 	case InRound:
 		// timer to switch to limbo
 		if is != nil && *is == TriviaGameTimerAlert {
-			t.goToRoundFromLimbo()
+			t.goToLimboFromRound()
 			t.broadcastGameUpdate(false)
 		}
 		break
@@ -125,6 +126,7 @@ func (t *TriviaGame) actionHandler(tgam *TriviaGameActionMessage, is *InternalSi
 			t.broadcastGameUpdate(true)
 			return
 		}
+
 		break
 	}
 }
