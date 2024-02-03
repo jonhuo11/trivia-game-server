@@ -6,12 +6,6 @@ import (
 	"sync"
 )
 
-type RoomState int64
-
-const (
-	Lobby  RoomState = 0
-	InGame RoomState = 1
-)
 
 type Room struct {
 	mu sync.Mutex
@@ -28,9 +22,6 @@ type Room struct {
 	// chat logs
 	chat []string
 
-	// state
-	state RoomState
-
 	// room + game are closely related, no need for game's own goroutine
 	game *TriviaGame
 
@@ -45,24 +36,26 @@ type Room struct {
 }
 
 // room creator helper
-func newRoom(debug bool) Room {
-	return Room{
+func newRoom(debug bool) *Room {
+	r := Room{
 		players:               make(map[*Player]int),
-		game:                  newTriviaGame(debug),
 		incomingRoomActions:   make(chan RoomActionMessage, 1),
 		incomingTriviaActions: make(chan TriviaGameActionMessage, 1),
 		debugMode:             debug,
 	}
+	g := newTriviaGame(r.broadcastGameUpdate, true)
+	r.game = g
+	return &r
 }
 
 // room loop, main logic here
 func (r *Room) run() {
-	// game logic
-	if r.state == InGame {
-		r.game.run() // one game loop
-	}
-
-	// read incoming inputs
+	/*
+	Blocks calculations until a signal is detected. Signals are:
+	1. Incoming room/game action
+	2. Outgoing game update
+	3. Round timer
+	*/
 	select {
 	case ram := <-r.incomingRoomActions:
 		// chat?
@@ -70,12 +63,18 @@ func (r *Room) run() {
 			r.writeChat(fmt.Sprintf("Player %d: %s", r.players[ram.from], *ram.Chat))
 		}
 
-		// start game action handler
-		if ram.Start != nil {
-			if r.state == InGame {
-				ram.from.send <- serverErrorHelper("Game already started")
-			} else {
+		// only the owner can start new games
+		if ram.Start != nil  {
+			r.mu.Lock()
+			v, ok := r.players[ram.from]
+			r.mu.Unlock()
+			
+			if r.game.state == InRound {
+				r.sendErrorTo(ram.from, "Game already started")
+			} else if ok && v == 0 {
 				r.startGame()
+			} else {
+				r.sendErrorTo(ram.from, "Only the owner can start a match")
 			}
 		}
 
@@ -89,13 +88,23 @@ func (r *Room) run() {
 	case tgam := <-r.incomingTriviaActions:
 		// route incoming game actions to the trivia handler
 		// TODO add error return channel
-		r.game.playerAction(tgam)
-	case tsum := <-r.game.outgoingTriviaStateUpdateMessages:
-		// broadcast to all players the game related update
-		r.broadcastGameUpdate(tsum)
-	default:
-		break
+		r.mu.Lock()
+		r.game.actionHandler(&tgam, nil)
+		r.mu.Unlock()
+	case <-r.game.timer.C:
+		// timer went off, reroute back to game handler
+		signal := TriviaGameTimerAlert
+		r.mu.Lock()
+		r.game.actionHandler(nil, &signal)
+		r.mu.Unlock()
 	}
+}
+// send error to player
+func (r *Room) sendErrorTo(p *Player, msg string) {
+	if r.debugMode {
+		return
+	}
+	p.send <- serverErrorHelper(msg)
 }
 
 // launches trivia game

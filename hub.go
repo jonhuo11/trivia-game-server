@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"github.com/google/uuid"
 )
@@ -57,17 +56,8 @@ func (h *Hub) createRoom(creator *Player) {
 		return
 	}
 	id := uuid.New().String()
-	// TODO use newRoom to create room
-	newroom := &Room{
-		code:                  id,
-		players:               map[*Player]int{creator: 0},
-		playernum:             1,
-		chat:                  []string{fmt.Sprintf("Welcome to room %s", id)},
-		state:                 Lobby,
-		game:                  newTriviaGame(false),
-		incomingRoomActions:   make(chan RoomActionMessage),
-		incomingTriviaActions: make(chan TriviaGameActionMessage),
-	}
+	newroom := newRoom(false)
+	newroom.join(creator)
 	h.rooms[id] = newroom
 	creator.room = newroom
 

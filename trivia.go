@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"time"
 )
 
@@ -13,14 +12,14 @@ const (
 )
 
 // default time per round
-const TriviaRoundTime = 10
+const DefaultTriviaRoundTime = 10
 
 // default time between rounds
-const TriviaLimboTime = 5
+const DefaultTriviaLimboTime = 5
 
 type TriviaGame struct {
 	// state of the current round, limbo or in round
-	roundState RoundState
+	state RoundState
 
 	// votes, map of player to their selected answer string
 	roundVotes map[*Player]string
@@ -46,90 +45,68 @@ type TriviaGame struct {
 	// answer to current selected question
 	answer string
 
-	// time/ticks remaining before current round ends
-	timer int
-
 	// assume this is always set
-	timerTicker *time.Ticker
-
-	// assume this is always set
-	delayTimer *time.Timer
-
-	// channel for sending updates to be broadcasted
-	outgoingTriviaStateUpdateMessages chan TriviaStateUpdateMessage
+	timer *time.Timer
 
 	// is in test mode?
 	debugMode bool
+
+	// round time
+	roundTime time.Duration
+
+	// limbo time
+	limboTime time.Duration
+
+	// room broadcaster
+	roomGameUpdateBroadcaster func(TriviaStateUpdateMessage)
 }
 
-func newTriviaGame(debug bool) *TriviaGame {
+func newTriviaGame(broadcaster func(TriviaStateUpdateMessage), debug bool) *TriviaGame {
 	return &TriviaGame{
-		roundState:                        InLimbo,
+		state:                        InLimbo,
 		round:                             0,
-		timer:                             20,
-		timerTicker:                       time.NewTicker(time.Second),
-		delayTimer:                        time.NewTimer(0),
+		timer:                             time.NewTimer(DefaultTriviaLimboTime * time.Second),
 		blue:                              make(map[*Player]bool),
 		red:                               make(map[*Player]bool),
 		blueScore:                         0,
 		redScore:                          0,
 		question:                          "",
 		answer:                            "",
-		outgoingTriviaStateUpdateMessages: make(chan TriviaStateUpdateMessage, 1),
 		debugMode:                         debug,
+		roundTime: DefaultTriviaRoundTime * time.Second,
+		limboTime: DefaultTriviaLimboTime * time.Second,
+		roomGameUpdateBroadcaster: broadcaster,
 	}
 }
 
 // reset and start game
 func (t *TriviaGame) startGame() {
-
+	t.state = InRound
+	t.round = 0
+	t.blueScore = 0
+	t.redScore = 0
+	t.question = ""
+	t.answer = ""
+	t.goToRoundFromLimbo()
 }
 
-// one update cycle for the game, send updates to room
-func (t *TriviaGame) run() {
-	defer t.broadcastGameUpdate(false)
-	switch t.roundState {
-	case InRound:
-		{
-			select {
-			case <-t.timerTicker.C:
-				if t.debugMode {
-					fmt.Println("Trivia timerTicker tick")
-				}
-				t.timer--
-			default:
-				break
-			}
 
-			if t.timer <= 0 {
-				// the round ended
-				// calculate winner by aggregating team votes, go to limbo, broadcast
-				t.endRoundAndGoToLimbo()
-			}
-
-			break
-		}
+/*
+Handle incoming player actions and rerouted actions, always runs after the run() cycle
+Only 1 action may execute per call
+*/
+func (t *TriviaGame) actionHandler(tgam *TriviaGameActionMessage, is *InternalSignal) {
+	switch t.state {
 	case InLimbo:
-		{
-			// wait for go to next round
-			select {
-			case <-t.delayTimer.C:
-				t.goToRoundFromLimbo()
-			default:
-				break
-			}
-
-			break
+		// timer to switch to round
+		if is != nil && *is == TriviaGameTimerAlert {
+			t.goToLimboFromRound()
+			t.broadcastGameUpdate(false)
+			return
 		}
-	}
-}
 
-// handle incoming player actions
-func (t *TriviaGame) playerAction(tgam TriviaGameActionMessage) {
-	switch t.roundState {
-	case InLimbo:
 		// joining teams
-		if tgam.Join != nil {
+		if tgam != nil && tgam.Join != nil {
 			if *(tgam.Join) == 0 { // blue
 				t.blue[tgam.from] = true
 				delete(t.red, tgam.from)
@@ -138,9 +115,14 @@ func (t *TriviaGame) playerAction(tgam TriviaGameActionMessage) {
 				delete(t.blue, tgam.from)
 			}
 			t.broadcastGameUpdate(true)
+			return
 		}
 		break
 	case InRound:
+		// timer to switch to limbo
+		if is != nil && *is == TriviaGameTimerAlert {
+			t.goToRoundFromLimbo()
+		}
 		break
 	}
 }
@@ -150,25 +132,23 @@ func (t *TriviaGame) pickNewQuestion(bank interface{}) {
 	// TODO
 }
 
-// starts a new round and enters round state immediately
+// starts a new round
 func (t *TriviaGame) goToRoundFromLimbo() {
-	if t.roundState != InLimbo {
+	if t.state != InLimbo {
 		return
 	}
 	t.round++
-	t.timer = TriviaRoundTime
-	t.timerTicker.Reset(time.Second)
-	t.roundState = InRound
+	t.state = InRound
+	t.timer.Reset(t.roundTime)
 }
 
-// ends round and enters limbo state immediately
-func (t *TriviaGame) endRoundAndGoToLimbo() {
-	if t.roundState != InRound {
+// enters limbo
+func (t *TriviaGame) goToLimboFromRound() {
+	if t.state != InRound {
 		return
 	}
-	t.timerTicker.Stop()
-	t.delayTimer.Reset(time.Second * TriviaLimboTime) // exit Limbo and start new round after X sec
-	t.roundState = InLimbo
+	t.state = InLimbo
+	t.timer.Reset(t.limboTime)
 }
 
 func (t *TriviaGame) broadcastGameUpdate(updateTeams bool) {
@@ -192,9 +172,8 @@ func (t *TriviaGame) broadcastGameUpdate(updateTeams bool) {
 	}
 
 	// set state info
-	tsum.RoundState = int(t.roundState)
+	tsum.State = int(t.state)
 	tsum.Round = t.round
-	tsum.RoundTimeLeft = t.timer
 
-	t.outgoingTriviaStateUpdateMessages <- tsum
+	t.roomGameUpdateBroadcaster(tsum)
 }

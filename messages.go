@@ -99,10 +99,13 @@ type TriviaStateUpdateMessage struct {
 	RedTeam *[]string `json:"redTeam"`
 
 	// limbo (0) or round (1)
-	RoundState int `json:"roundState"`
+	State int `json:"state"`
 
-	// round time remaining, 0 means round ended and await next update packet
-	RoundTimeLeft int `json:"roundTimeLeft"`
+	// total round time
+	RoundTime int `json:"roundTime"`
+
+	// total limbo time
+	LimboTime int `json:"limboTime"`
 
 	// rounds since game started
 	Round int `json:"round"`
@@ -118,3 +121,8 @@ type TriviaGameActionMessage struct {
 	// which option in the trivia to guess
 	Guess *string `json:"guess"`
 }
+
+
+type InternalSignal int64
+
+const TriviaGameTimerAlert InternalSignal = 0
