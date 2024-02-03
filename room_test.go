@@ -4,13 +4,8 @@ import (
 	"testing"
 )
 
-func boolPtr(v bool) *bool {
-	x := v
-	return &x
-}
-
 func TestStart(t *testing.T) {
-	room := newRoom(true)
+	room := newRoom("test", true)
 	if room.game.state == InRound {
 		t.Fatalf("Room should start in Limbo")
 	}
@@ -18,7 +13,7 @@ func TestStart(t *testing.T) {
 	pl1 := &Player{} // not admin
 	room.join(pl0)
 	room.join(pl1)
-	
+
 	// only admin can start room
 	sm := RoomActionMessage{}
 	sm.from = pl1
@@ -39,7 +34,7 @@ func TestStart(t *testing.T) {
 }
 
 func TestLeave(t *testing.T) {
-	room := newRoom(true)
+	room := newRoom("test", true)
 	room.startGame()
 
 	// join player to the room
@@ -61,4 +56,3 @@ func TestLeave(t *testing.T) {
 	}
 
 }
-

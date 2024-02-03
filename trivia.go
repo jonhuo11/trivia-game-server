@@ -7,8 +7,9 @@ import (
 type RoundState int64
 
 const (
-	InLimbo RoundState = 0
-	InRound RoundState = 1
+	InLimbo RoundState = 0 // time between rounds
+	InRound RoundState = 1 // active play time
+	InLobby RoundState = 2 // team select
 )
 
 // default time per round
@@ -63,18 +64,18 @@ type TriviaGame struct {
 
 func newTriviaGame(broadcaster func(TriviaStateUpdateMessage), debug bool) *TriviaGame {
 	return &TriviaGame{
-		state:                        InLimbo,
-		round:                             0,
-		timer:                             time.NewTimer(DefaultTriviaLimboTime * time.Second),
-		blue:                              make(map[*Player]bool),
-		red:                               make(map[*Player]bool),
-		blueScore:                         0,
-		redScore:                          0,
-		question:                          "",
-		answer:                            "",
-		debugMode:                         debug,
-		roundTime: DefaultTriviaRoundTime * time.Second,
-		limboTime: DefaultTriviaLimboTime * time.Second,
+		state:                     InLobby, // team select
+		round:                     0,
+		timer:                     time.NewTimer(DefaultTriviaLimboTime * time.Second),
+		blue:                      make(map[*Player]bool),
+		red:                       make(map[*Player]bool),
+		blueScore:                 0,
+		redScore:                  0,
+		question:                  "",
+		answer:                    "",
+		debugMode:                 debug,
+		roundTime:                 DefaultTriviaRoundTime * time.Second,
+		limboTime:                 DefaultTriviaLimboTime * time.Second,
 		roomGameUpdateBroadcaster: broadcaster,
 	}
 }
@@ -90,7 +91,6 @@ func (t *TriviaGame) startGame() {
 	t.goToRoundFromLimbo()
 }
 
-
 /*
 Handle incoming player actions and rerouted actions, always runs after the run() cycle
 Only 1 action may execute per call
@@ -104,7 +104,15 @@ func (t *TriviaGame) actionHandler(tgam *TriviaGameActionMessage, is *InternalSi
 			t.broadcastGameUpdate(false)
 			return
 		}
-
+		break
+	case InRound:
+		// timer to switch to limbo
+		if is != nil && *is == TriviaGameTimerAlert {
+			t.goToRoundFromLimbo()
+			t.broadcastGameUpdate(false)
+		}
+		break
+	case InLobby:
 		// joining teams
 		if tgam != nil && tgam.Join != nil {
 			if *(tgam.Join) == 0 { // blue
@@ -116,12 +124,6 @@ func (t *TriviaGame) actionHandler(tgam *TriviaGameActionMessage, is *InternalSi
 			}
 			t.broadcastGameUpdate(true)
 			return
-		}
-		break
-	case InRound:
-		// timer to switch to limbo
-		if is != nil && *is == TriviaGameTimerAlert {
-			t.goToRoundFromLimbo()
 		}
 		break
 	}
@@ -161,10 +163,10 @@ func (t *TriviaGame) broadcastGameUpdate(updateTeams bool) {
 		blue := []string{}
 		red := []string{}
 		for p := range t.blue {
-			blue = append(blue, p.name)
+			blue = append(blue, p.roomname)
 		}
 		for p := range t.red {
-			red = append(red, p.name)
+			red = append(red, p.roomname)
 		}
 
 		tsum.BlueTeam = &blue

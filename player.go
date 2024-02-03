@@ -33,8 +33,11 @@ var upgrader = websocket.Upgrader{
 
 // Player is a middleman between the websocket connection and the
 type Player struct {
-	// in game name
+	// id
 	name string
+
+	// room name
+	roomname string
 
 	// reference to the hub
 	hub *Hub

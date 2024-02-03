@@ -59,6 +59,9 @@ type RoomActionMessage struct {
 	// should try to start the game?
 	Start *bool `json:"start"`
 
+	// join the room? TODO make this the primary way to join rooms
+	Join *bool `json:"join"`
+
 	// makes the sender leave the room
 	Leave *bool `json:"leave"`
 }
@@ -121,7 +124,6 @@ type TriviaGameActionMessage struct {
 	// which option in the trivia to guess
 	Guess *string `json:"guess"`
 }
-
 
 type InternalSignal int64
 

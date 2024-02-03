@@ -35,6 +35,7 @@ func newHub() *Hub {
 	}
 }
 
+// async safe join room
 func (h *Hub) joinRoom(p *Player, code string) {
 	if p.room != nil {
 		p.send <- serverErrorHelper("this player is already in a room")
@@ -44,9 +45,10 @@ func (h *Hub) joinRoom(p *Player, code string) {
 		p.send <- serverErrorHelper("this room does not exist")
 		return
 	} else {
-		room.join(p)
-		room.broadcastRoomUpdate(false)
-		room.game.broadcastGameUpdate(true)
+		ram := RoomActionMessage{}
+		ram.from = p
+		ram.Join = boolPtr(true)
+		room.incomingRoomActions <- ram // will join on next update
 	}
 }
 
@@ -56,7 +58,7 @@ func (h *Hub) createRoom(creator *Player) {
 		return
 	}
 	id := uuid.New().String()
-	newroom := newRoom(false)
+	newroom := newRoom(id, false)
 	newroom.join(creator)
 	h.rooms[id] = newroom
 	creator.room = newroom
@@ -78,11 +80,8 @@ func (h *Hub) run() {
 		case player := <-h.unregister:
 			if player.room != nil {
 				if _, in := h.rooms[player.room.code]; in {
-					ram := RoomActionMessage{}
-					ram.from = player
-					t := true
-					ram.Leave = &t
-					h.rooms[player.room.code].incomingRoomActions <- ram
+					// its ok to do this as player.send is buffered by 256 msges
+					player.room.removePlayer(player)
 				}
 			}
 			delete(h.players, player)
