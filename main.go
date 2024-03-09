@@ -40,7 +40,7 @@ func serveWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	player := &Player{
-		name: fmt.Sprintf("Player %v", uuid.New().String()),
+		id: fmt.Sprintf("Player %v", uuid.New().String()),
 		hub:  hub,
 		conn: conn,
 		send: make(chan OutgoingMessage, 512), // buffer the send channel by 512 messages to prevent panic overflow

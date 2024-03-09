@@ -58,7 +58,7 @@ func (r *Room) run() {
 	case ram := <-r.incomingRoomActions:
 		// chat?
 		if ram.Chat != nil {
-			r.writeChat(fmt.Sprintf("%s: %s", ram.from.roomname, *ram.Chat))
+			r.writeChat(fmt.Sprintf("%s: %s", ram.from.id, *ram.Chat))
 		}
 
 		// only the owner can start new games
@@ -74,14 +74,20 @@ func (r *Room) run() {
 			}
 		}
 
-		// join the room
+		// join the room, can happen at any time
 		if ram.Join != nil && *(ram.Join) {
 			r.join(ram.from)
 		}
 
-		// leave the room
+		// leave the room, can happen at any time
 		if ram.Leave != nil && *(ram.Leave) {
 			r.removePlayer(ram.from)
+			blue, red := r.game.teamIdLists()
+			r.broadcastGameUpdate(TriviaStateUpdateMessage{
+				Type: TSUTTeam,
+				BlueTeamIds: blue,
+				RedTeamIds: red,
+			})
 		}
 
 		// broadcast updates
@@ -116,7 +122,7 @@ func (r *Room) join(p *Player) {
 	r.players[p] = r.playernum
 	r.playernum++
 	p.room = r
-	p.roomname = fmt.Sprintf("Player %d", r.players[p])
+	p.id = fmt.Sprintf("Player %d", r.players[p])
 }
 
 // remove player from room and also game team
@@ -143,7 +149,7 @@ func (r *Room) broadcastRoomUpdate(created bool) {
 
 	playerlist := []string{}
 	for p := range r.players {
-		playerlist = append(playerlist, p.roomname)
+		playerlist = append(playerlist, p.id)
 	}
 	rum := RoomUpdateMessage{
 		Code:    r.code,

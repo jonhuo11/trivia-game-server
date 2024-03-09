@@ -82,7 +82,7 @@ type RoomUpdateMessage struct {
 	Code string `json:"code"`
 
 	// playerlist TODO make player id/name and make this optional
-	Players []string `json:"players"`
+	Players []string `json:"playerIds"`
 
 	// chat logs TODO make this a delta, not entire logs
 	Chat []string `json:"chat"`
@@ -91,9 +91,33 @@ type RoomUpdateMessage struct {
 // types for update messages
 type TriviaStateUpdateType int
 const (
+	/*
+	blueTeamIds
+	redTeamIds
+	*/
 	TSUTTeam TriviaStateUpdateType = 0
+
+	/*
+	state
+	round
+	question
+	answers
+	*/
 	TSUTGoToRoundFromLimbo TriviaStateUpdateType = 1
+
+	/*
+	state
+	*/
 	TSUTGoToLimboFromRound TriviaStateUpdateType = 2
+
+	/*
+	Admin started the game
+	roundTime
+	limboTime
+	*/
+	TSUTStartup TriviaStateUpdateType = 3
+
+
 )
 
 // outgoing
@@ -102,10 +126,10 @@ type TriviaStateUpdateMessage struct {
 	Type TriviaStateUpdateType `json:"type"`
 
 	// list of blue team players by id
-	BlueTeamIds []string `json:"blueTeam"`
+	BlueTeamIds []string `json:"blueTeamIds"`
 
 	// list of red team players
-	RedTeamIds []string `json:"redTeam"`
+	RedTeamIds []string `json:"redTeamIds"`
 
 	// limbo (0), round(1), lobby(2)
 	State RoundState `json:"state"`
@@ -117,10 +141,13 @@ type TriviaStateUpdateMessage struct {
 	Answers []string `json:"answers"`
 
 	// round time, send at start
-	RoundTime int `json:"roundTime"`
+	RoundTime int64 `json:"roundTime"`
 
 	// limbo time, sent at start
-	LimboTime int `json:"limboTime"`
+	LimboTime int64 `json:"limboTime"`
+
+	// startup time, sent at start
+	StartupTime int64 `json:"startupTime"`
 
 	// rounds since game started
 	Round int `json:"round"`

@@ -13,11 +13,14 @@ const (
 	InLobby RoundState = 2 // team select
 )
 
-// default time per round
+// default time per round (seconds)
 const DefaultTriviaRoundTime = 10
 
 // default time between rounds
 const DefaultTriviaLimboTime = 5
+
+// default time to transition from InLobby to InRound
+const DefaultTriviaStartupTime = 5
 
 type roomBroadcaster func(TriviaStateUpdateMessage)
 
@@ -61,6 +64,9 @@ type TriviaGame struct {
 	// limbo time
 	limboTime time.Duration
 
+	// startup time
+	startupTime time.Duration
+
 	// room broadcaster
 	roomGameUpdateBroadcaster roomBroadcaster
 }
@@ -80,6 +86,7 @@ func newTriviaGame(broadcaster roomBroadcaster, debug bool) *TriviaGame {
 		debugMode:                 debug,
 		roundTime:                 DefaultTriviaRoundTime * time.Second,
 		limboTime:                 DefaultTriviaLimboTime * time.Second,
+		startupTime: DefaultTriviaStartupTime * time.Second,
 		roomGameUpdateBroadcaster: broadcaster,
 	}
 }
@@ -89,8 +96,16 @@ func (t *TriviaGame) startGame() {
 	t.round = 0
 	t.blueScore = 0
 	t.redScore = 0
-	t.state = InLimbo
-	t.goToRoundFromLimboWithBroadcast()
+
+	t.broadcastGameUpdate(TriviaStateUpdateMessage{
+		Type: TSUTStartup,
+		RoundTime: int64(t.roundTime / time.Second),
+		LimboTime: int64(t.roundTime / time.Second),
+		StartupTime: int64(t.startupTime / time.Second),
+	})
+
+	// startup timer
+	t.timer.Reset(t.startupTime)
 }
 
 /*
@@ -123,6 +138,12 @@ func (t *TriviaGame) actionHandlerWithBroadcast(tgam *TriviaGameActionMessage, i
 		}
 		break
 	case InLobby:
+		// startup timer is done
+		if is != nil && *is == TriviaGameTimerAlert {
+			t.state = InLimbo
+			t.goToRoundFromLimboWithBroadcast()
+		}
+
 		// joining teams
 		if tgam != nil && tgam.Type == TGATJoin {
 			t.joinTeamWithBroadcast(tgam.Join, tgam.from)
@@ -173,6 +194,18 @@ func (t *TriviaGame) goToLimboFromRoundWithBroadcast() {
 	})
 }
 
+func (t *TriviaGame) teamIdLists() (blue []string, red []string) {
+	b := []string{}
+	r := []string{}
+	for k := range t.blue {
+		b = append(b, k.id)
+	}
+	for k := range t.red {
+		r = append(r, k.id)
+	}
+	return b, r
+}
+
 func (t *TriviaGame) joinTeamWithBroadcast(team int, who *Player) {
 	if team == 0 { // blue
 		t.blue[who] = true
@@ -181,14 +214,7 @@ func (t *TriviaGame) joinTeamWithBroadcast(team int, who *Player) {
 		t.red[who] = true
 		delete(t.blue, who)
 	}
-	b := []string{}
-	r := []string{}
-	for k := range t.blue {
-		b = append(b, k.name)
-	}
-	for k := range t.red {
-		r = append(r, k.name)
-	}
+	b, r := t.teamIdLists()
 	t.broadcastGameUpdate(TriviaStateUpdateMessage{
 		Type: TSUTTeam,
 		BlueTeamIds: b,
