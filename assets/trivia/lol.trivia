@@ -1,0 +1,319 @@
+{
+    "questions": [
+        {
+            "q": "What is the name of Azir's ultimate?",
+            "a": [
+                {
+                    "a": "Shuriman Shuffle",
+                    "correct": false
+                },
+                {
+                    "a": "Shifting Sands",
+                    "correct": false
+                },
+                {
+                    "a": "Imperial Divide",
+                    "correct": false
+                },
+                {
+                    "a": "Emperor's Divide",
+                    "correct": true
+                }
+            ]
+        },
+        {
+            "q": "Which champion is known as \"The Colossus\"?",
+            "a": [
+                {
+                    "a": "Malphite",
+                    "correct": false
+                },
+                {
+                    "a": "Sion",
+                    "correct": false
+                },
+                {
+                    "a": "Galio",
+                    "correct": true
+                },
+                {
+                    "a": "Ornn",
+                    "correct": false
+                }
+            ]
+        },
+        {
+            "q": "Which champion is known as \"The Enlightened One\"?",
+            "a": [
+                {
+                    "a": "Xerath",
+                    "correct": false
+                },
+                {
+                    "a": "Kayle",
+                    "correct": false
+                },
+                {
+                    "a": "Karma",
+                    "correct": true
+                },
+                {
+                    "a": "Taric",
+                    "correct": false
+                }
+            ]
+        },
+        {
+            "q": "What is the name of Milio's Q ability?",
+            "a": [
+                {
+                    "a": "Ultra Mega Fire Kick",
+                    "correct": true
+                },
+                {
+                    "a": "Super Deadly Flame Ball",
+                    "correct": false
+                },
+                {
+                    "a": "Mega Deadly Fire Ball",
+                    "correct": false
+                },
+                {
+                    "a": "Ultra Mega Ball of Flame",
+                    "correct": false
+                }
+            ]
+        },
+        {
+            "q": "Which champion is known as \"The Tidecaller\"?",
+            "a": [
+                {
+                    "a": "Fizz",
+                    "correct": false
+                },
+                {
+                    "a": "Nami",
+                    "correct": true
+                },
+                {
+                    "a": "Nautilus",
+                    "correct": false
+                },
+                {
+                    "a": "Illaoi",
+                    "correct": false
+                }
+            ]
+        },
+        {
+            "q": "Which champion is known as the \"Fury of the North\"?",
+            "a": [
+                {
+                    "a": "Braum",
+                    "correct": false
+                },
+                {
+                    "a": "Ashe",
+                    "correct": false
+                },
+                {
+                    "a": "Volibear",
+                    "correct": false
+                },
+                {
+                    "a": "Sejuani",
+                    "correct": true
+                }
+            ]
+        },
+        {
+            "q": "What is the name of Sivir's passive?",
+            "a": [
+                {
+                    "a": "Fleet footwork",
+                    "correct": false
+                },
+                {
+                    "a": "Agile footing",
+                    "correct": false
+                },
+                {
+                    "a": "Fleet of foot",
+                    "correct": true
+                },
+                {
+                    "a": "Agile footwork",
+                    "correct": false
+                }
+            ]
+        },
+        {
+            "q": "Which of these streamers is best known for playing the champion Twitch?",
+            "a": [
+                {
+                    "a": "Tyler1",
+                    "correct": false
+                },
+                {
+                    "a": "Drututt",
+                    "correct": false
+                },
+                {
+                    "a": "RatIRL",
+                    "correct": true
+                },
+                {
+                    "a": "Dantes",
+                    "correct": false
+                }
+            ]
+        },
+        {
+            "q": "Which of these champions is NOT from Bilgewater?",
+            "a": [
+                {
+                    "a": "Tahm Kench",
+                    "correct": false
+                },
+                {
+                    "a": "Nami",
+                    "correct": true
+                },
+                {
+                    "a": "Nilah",
+                    "correct": false
+                },
+                {
+                    "a": "Twisted Fate",
+                    "correct": false
+                }
+            ]
+        },
+        {
+            "q": "Which champion has the spell \"Cull the Meek\"?",
+            "a": [
+                {
+                    "a": "Darius",
+                    "correct": false
+                },
+                {
+                    "a": "Red Kayn",
+                    "correct": false
+                },
+                {
+                    "a": "Lucian",
+                    "correct": false
+                },
+                {
+                    "a": "Renekton",
+                    "correct": true
+                }
+            ]
+        },
+        {
+            "q": "Which champion is the smallest?",
+            "a": [
+                {
+                    "a": "Twitch",
+                    "correct": false
+                },
+                {
+                    "a": "Shaco",
+                    "correct": true
+                },
+                {
+                    "a": "Yuumi",
+                    "correct": false
+                },
+                {
+                    "a": "Veigar",
+                    "correct": false
+                }
+            ]
+        },
+        {
+            "q": "Which of these skins does not exist?",
+            "a": [
+                {
+                    "a": "Corsair Quinn",
+                    "correct": false
+                },
+                {
+                    "a": "Project: Leona",
+                    "correct": false
+                },
+                {
+                    "a": "Boneclaw Shyvana",
+                    "correct": false
+                },
+                {
+                    "a": "Steel Dragon Taric",
+                    "correct": true
+                }
+            ]
+        },
+        {
+            "q": "Which of these champions was released the earliest?",
+            "a": [
+                {
+                    "a": "Lulu",
+                    "correct": false
+                },
+                {
+                    "a": "Hecarim",
+                    "correct": false
+                },
+                {
+                    "a": "Renekton",
+                    "correct": true
+                },
+                {
+                    "a": "Draven",
+                    "correct": false
+                }
+            ]
+        },
+        {
+            "q": "What is the name of Naafiri's ultimate ability?",
+            "a": [
+                {
+                    "a": "The Call of the Pack",
+                    "correct": true
+                },
+                {
+                    "a": "The Call of the Wolves",
+                    "correct": false
+                },
+                {
+                    "a": "The Daggers of Night",
+                    "correct": false
+                },
+                {
+                    "a": "The Wolves of the Night",
+                    "correct": false
+                }
+            ]
+        },
+        {
+            "q": "Which champion has the ability \"Blood Frenzy\"?",
+            "a": [
+                {
+                    "a": "Vladimir",
+                    "correct": false
+                },
+                {
+                    "a": "Tryndamere",
+                    "correct": false
+                },
+                {
+                    "a": "Swain",
+                    "correct": false
+                },
+                {
+                    "a": "Briar",
+                    "correct": true
+                }
+            ]
+        }
+    ]
+}

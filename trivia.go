@@ -18,6 +18,8 @@ const DefaultTriviaRoundTime = 10
 // default time between rounds
 const DefaultTriviaLimboTime = 5
 
+type roomBroadcaster func(TriviaStateUpdateMessage)
+
 type TriviaGame struct {
 	// state of the current round, limbo or in round
 	state RoundState
@@ -33,6 +35,9 @@ type TriviaGame struct {
 
 	// playerlist
 	red map[*Player]bool
+
+	// bank of questions
+	bank TriviaBank
 
 	// score
 	blueScore int
@@ -53,16 +58,18 @@ type TriviaGame struct {
 	limboTime time.Duration
 
 	// room broadcaster
-	roomGameUpdateBroadcaster func(TriviaStateUpdateMessage)
+	roomGameUpdateBroadcaster roomBroadcaster
 }
 
-func newTriviaGame(broadcaster func(TriviaStateUpdateMessage), debug bool) *TriviaGame {
+func newTriviaGame(broadcaster roomBroadcaster, debug bool) *TriviaGame {
+	bank, _:= loadTriviaBankDefault()
 	return &TriviaGame{
 		state:                     InLobby, // team select
 		round:                     0,
 		timer:                     time.NewTimer(DefaultTriviaLimboTime * time.Second),
 		blue:                      make(map[*Player]bool),
 		red:                       make(map[*Player]bool),
+		bank: bank,
 		blueScore:                 0,
 		redScore:                  0,
 		debugMode:                 debug,
