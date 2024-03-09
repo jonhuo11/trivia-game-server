@@ -65,7 +65,7 @@ func (r *Room) run() {
 		if ram.Start != nil {
 			v, ok := r.players[ram.from]
 
-			if r.game.state == InRound {
+			if r.game.state == InRound || r.game.state == InLimbo {
 				r.sendErrorTo(ram.from, "Game already started")
 			} else if ok && v == 0 {
 				r.startGame()

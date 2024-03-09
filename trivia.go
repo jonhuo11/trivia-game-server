@@ -76,7 +76,7 @@ func newTriviaGame(broadcaster roomBroadcaster, debug bool) *TriviaGame {
 	return &TriviaGame{
 		state:                     InLobby, // team select
 		round:                     0,
-		timer:                     time.NewTimer(DefaultTriviaLimboTime * time.Second),
+		timer:                     nil,
 		blue:                      make(map[*Player]bool),
 		red:                       make(map[*Player]bool),
 		bank: bank,
@@ -105,7 +105,7 @@ func (t *TriviaGame) startGame() {
 	})
 
 	// startup timer
-	t.timer.Reset(t.startupTime)
+	t.timer = time.NewTimer(t.startupTime)
 }
 
 /*
@@ -127,6 +127,7 @@ func (t *TriviaGame) actionHandlerWithBroadcast(tgam *TriviaGameActionMessage, i
 		// timer to switch to limbo
 		if is != nil && *is == TriviaGameTimerAlert {
 			t.goToLimboFromRoundWithBroadcast()
+			return
 		}
 
 		
@@ -141,11 +142,14 @@ func (t *TriviaGame) actionHandlerWithBroadcast(tgam *TriviaGameActionMessage, i
 		// startup timer is done
 		if is != nil && *is == TriviaGameTimerAlert {
 			t.state = InLimbo
+			//fmt.Println("timer")
 			t.goToRoundFromLimboWithBroadcast()
+			return
 		}
 
 		// joining teams
 		if tgam != nil && tgam.Type == TGATJoin {
+			//fmt.Println("joining teams")
 			t.joinTeamWithBroadcast(tgam.Join, tgam.from)
 			return
 		}
