@@ -73,10 +73,12 @@ type TriviaGame struct {
 
 func newTriviaGame(broadcaster roomBroadcaster, debug bool) *TriviaGame {
 	bank, _:= loadTriviaBankDefault()
+	timer := time.NewTimer(0)
+	timer.Stop()
 	return &TriviaGame{
 		state:                     InLobby, // team select
 		round:                     0,
-		timer:                     nil,
+		timer:                     timer,
 		blue:                      make(map[*Player]bool),
 		red:                       make(map[*Player]bool),
 		bank: bank,
@@ -105,7 +107,7 @@ func (t *TriviaGame) startGame() {
 	})
 
 	// startup timer
-	t.timer = time.NewTimer(t.startupTime)
+	t.timer.Reset(t.startupTime)
 }
 
 /*
