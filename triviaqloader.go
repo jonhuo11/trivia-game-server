@@ -12,7 +12,7 @@ type TriviaQuestion struct {
 
 type TriviaAnswer struct {
 	A string `json:"a"`
-	Correct bool `json:"correct"`
+	Correct bool `json:"-"` // dont serialize this field
 }
 
 type TriviaBank struct {

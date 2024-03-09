@@ -117,6 +117,10 @@ const (
 	*/
 	TSUTStartup TriviaStateUpdateType = 3
 
+	/*
+	Sync a new player
+	*/
+	TSUTSyncNew TriviaStateUpdateType = 4
 
 )
 
@@ -135,10 +139,10 @@ type TriviaStateUpdateMessage struct {
 	State RoundState `json:"state"`
 
 	// the new question
-	Question string `json:"question"`
+	Question *string `json:"question"`
 
 	// possible answers, cannot give real answer to clientside
-	Answers []string `json:"answers"`
+	Answers *[]TriviaAnswer `json:"answers"`
 
 	// round time, send at start
 	RoundTime int64 `json:"roundTime"`

@@ -14,10 +14,10 @@ const (
 )
 
 // default time per round (seconds)
-const DefaultTriviaRoundTime = 10
+const DefaultTriviaRoundTime = 20
 
 // default time between rounds
-const DefaultTriviaLimboTime = 5
+const DefaultTriviaLimboTime = 10
 
 // default time to transition from InLobby to InRound
 const DefaultTriviaStartupTime = 5
@@ -174,16 +174,12 @@ func (t *TriviaGame) goToRoundFromLimboWithBroadcast() {
 	t.state = InRound
 	t.timer.Reset(t.roundTime)
 	t.pickNewQuestion()
-	a := []string{}
-	for _, q := range t.activeQuestion.A { // only get the answer options not the correctness
-		a = append(a, q.A)
-	}
 	t.broadcastGameUpdate(TriviaStateUpdateMessage{
 		Type: TSUTGoToRoundFromLimbo,
 		Round: t.round,
 		State: t.state,
-		Question: t.activeQuestion.Q,
-		Answers: a,
+		Question: &t.activeQuestion.Q,
+		Answers: &t.activeQuestion.A,
 	})
 }
 

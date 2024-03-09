@@ -55,7 +55,7 @@ func (r *Room) run() {
 		3. Round timer
 	*/
 	select {
-	case ram := <-r.incomingRoomActions:
+	case ram := <-r.incomingRoomActions: // TODO refactor to use action codes
 		// chat?
 		if ram.Chat != nil {
 			r.writeChat(fmt.Sprintf("%s: %s", ram.from.id, *ram.Chat))
@@ -72,26 +72,44 @@ func (r *Room) run() {
 			} else {
 				r.sendErrorTo(ram.from, "Only the owner can start a match")
 			}
+			r.broadcastRoomUpdate(false)
+			break
 		}
 
 		// join the room, can happen at any time
 		if ram.Join != nil && *(ram.Join) {
 			r.join(ram.from)
+			// notify all players that someone joined
+			r.broadcastRoomUpdate(false) 
+			// notify new player of game state, no need to do room update since broadcastRoomUpdate does this already
+			bl, red := r.game.teamIdLists()
+			tsum := &TriviaStateUpdateMessage{ 
+				Type: TSUTSyncNew,
+				BlueTeamIds: bl,
+				RedTeamIds: red,
+				State: r.game.state,
+			}
+			if r.game.activeQuestion != nil {
+				tsum.Question = &r.game.activeQuestion.Q
+				tsum.Answers = &r.game.activeQuestion.A
+			}
+			r.syncPlayer(ram.from, nil, tsum)
+			break
 		}
 
 		// leave the room, can happen at any time
 		if ram.Leave != nil && *(ram.Leave) {
 			r.removePlayer(ram.from)
 			blue, red := r.game.teamIdLists()
+			// notify all players that someone left
 			r.broadcastGameUpdate(TriviaStateUpdateMessage{
 				Type: TSUTTeam,
 				BlueTeamIds: blue,
 				RedTeamIds: red,
 			})
+			r.broadcastRoomUpdate(false)
+			break
 		}
-
-		// broadcast updates
-		r.broadcastRoomUpdate(false)
 	case tgam := <-r.incomingTriviaActions:
 		// route incoming game actions to the trivia handler
 		// TODO add error return channel
@@ -141,6 +159,7 @@ func (r *Room) writeChat(msg string) {
 	//fmt.Println(r.chat)
 }
 
+
 // lets clients know about room updates
 func (r *Room) broadcastRoomUpdate(created bool) {
 	if r.debugMode {
@@ -160,12 +179,9 @@ func (r *Room) broadcastRoomUpdate(created bool) {
 		tmp := true
 		rum.Created = &tmp
 	}
-	str, _ := json.Marshal(rum)
+	og, _ := outgoing(RoomUpdate, rum)
 	for player := range r.players {
-		player.send <- OutgoingMessage{
-			Type:    RoomUpdate,
-			Content: str,
-		}
+		player.send <- *og
 	}
 }
 
@@ -175,11 +191,39 @@ func (r *Room) broadcastGameUpdate(tsum TriviaStateUpdateMessage) {
 		return
 	}
 
+	og, _ := outgoing(TriviaGameUpdate, tsum)
 	for p := range r.players {
-		str, _ := json.Marshal(tsum)
-		p.send <- OutgoingMessage{
-			Type:    TriviaGameUpdate,
+		p.send <- *og
+	}
+}
+
+// a new client joined, sync its data
+func (r *Room) syncPlayer(to *Player, rum *RoomUpdateMessage, tsum *TriviaStateUpdateMessage) {
+	if r.debugMode || to == nil {
+		return
+	}
+
+	if rum != nil {
+		og, _ := outgoing(RoomUpdate, rum)
+		to.send <- *og
+	}
+
+	if tsum != nil {
+		og, _ := outgoing(TriviaGameUpdate, tsum)
+		to.send <- *og
+	}
+
+}
+
+
+// helper
+func outgoing(smt ServerMessageType, data interface{}) (*OutgoingMessage, error) {
+	if str, err := json.Marshal(data); err != nil {
+		return nil, err
+	} else {
+		return &OutgoingMessage{
+			Type: smt,
 			Content: str,
-		}
+		}, nil
 	}
 }
