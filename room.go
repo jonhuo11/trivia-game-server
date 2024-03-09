@@ -74,25 +74,18 @@ func (r *Room) run() {
 			}
 		}
 
-		gameUpdate := false
 		// join the room
 		if ram.Join != nil && *(ram.Join) {
 			r.join(ram.from)
-			gameUpdate = true
 		}
 
 		// leave the room
 		if ram.Leave != nil && *(ram.Leave) {
 			r.removePlayer(ram.from)
-			gameUpdate = true
 		}
 
 		// broadcast updates
 		r.broadcastRoomUpdate(false)
-
-		if gameUpdate {
-			r.game.broadcastGameUpdate(true)
-		}
 	case tgam := <-r.incomingTriviaActions:
 		// route incoming game actions to the trivia handler
 		// TODO add error return channel

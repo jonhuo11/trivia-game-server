@@ -88,36 +88,63 @@ type RoomUpdateMessage struct {
 	Chat []string `json:"chat"`
 }
 
+// types for update messages
+type TriviaStateUpdateType int
+const (
+	TSUTTeam TriviaStateUpdateType = 0
+	TSUTGoToRoundFromLimbo TriviaStateUpdateType = 1
+	TSUTGoToLimboFromRound TriviaStateUpdateType = 2
+)
+
 // outgoing
 type TriviaStateUpdateMessage struct {
-	// list of blue team players
-	BlueTeam *[]string `json:"blueTeam"`
+	// type of message, used on frontend to determine server action, kind of mimicking RPC calls
+	Type TriviaStateUpdateType `json:"type"`
+
+	// list of blue team players by id
+	BlueTeamIds []string `json:"blueTeam"`
 
 	// list of red team players
-	RedTeam *[]string `json:"redTeam"`
+	RedTeamIds []string `json:"redTeam"`
 
 	// limbo (0), round(1), lobby(2)
-	State int `json:"state"`
+	State RoundState `json:"state"`
+
+	// the new question
+	Question string `json:"question"`
+
+	// possible answers, cannot give real answer to clientside
+	Answers []string `json:"answers"`
 
 	// round time, send at start
-	RoundTime *int `json:"roundTime"`
+	RoundTime int `json:"roundTime"`
 
 	// limbo time, sent at start
-	LimboTime *int `json:"limboTime"`
+	LimboTime int `json:"limboTime"`
 
 	// rounds since game started
 	Round int `json:"round"`
 }
 
+// types for incoming trivia actions
+type TriviaGameActionType int
+const (
+	TGATJoin TriviaGameActionType = 0
+	TGATGuess TriviaGameActionType = 1
+)
+
 // incoming
 type TriviaGameActionMessage struct {
 	ActionMessage
 
+	// type
+	Type TriviaGameActionType `json:"type"`
+
 	// which team to join, 0 is blue 1 is red, nil means no action
-	Join *int `json:"join"`
+	Join int `json:"join"`
 
 	// which option in the trivia to guess
-	Guess *string `json:"guess"`
+	Guess int `json:"guess"`
 }
 
 // signals for internal messaging between goroutines
