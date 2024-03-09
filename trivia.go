@@ -72,7 +72,7 @@ type TriviaGame struct {
 }
 
 func newTriviaGame(broadcaster roomBroadcaster, debug bool) *TriviaGame {
-	bank, _:= loadTriviaBankDefault()
+	bank, _ := loadTriviaBankDefault()
 	timer := time.NewTimer(0)
 	timer.Stop()
 	return &TriviaGame{
@@ -81,14 +81,14 @@ func newTriviaGame(broadcaster roomBroadcaster, debug bool) *TriviaGame {
 		timer:                     timer,
 		blue:                      make(map[*Player]bool),
 		red:                       make(map[*Player]bool),
-		bank: bank,
-		activeQuestion: nil,
+		bank:                      bank,
+		activeQuestion:            nil,
 		blueScore:                 0,
 		redScore:                  0,
 		debugMode:                 debug,
 		roundTime:                 DefaultTriviaRoundTime * time.Second,
 		limboTime:                 DefaultTriviaLimboTime * time.Second,
-		startupTime: DefaultTriviaStartupTime * time.Second,
+		startupTime:               DefaultTriviaStartupTime * time.Second,
 		roomGameUpdateBroadcaster: broadcaster,
 	}
 }
@@ -100,9 +100,9 @@ func (t *TriviaGame) startGame() {
 	t.redScore = 0
 
 	t.broadcastGameUpdate(TriviaStateUpdateMessage{
-		Type: TSUTStartup,
-		RoundTime: int64(t.roundTime / time.Second),
-		LimboTime: int64(t.roundTime / time.Second),
+		Type:        TSUTStartup,
+		RoundTime:   int64(t.roundTime / time.Second),
+		LimboTime:   int64(t.roundTime / time.Second),
 		StartupTime: int64(t.startupTime / time.Second),
 	})
 
@@ -131,12 +131,10 @@ func (t *TriviaGame) actionHandlerWithBroadcast(tgam *TriviaGameActionMessage, i
 			t.goToLimboFromRoundWithBroadcast()
 			return
 		}
-
-		
-		if tgam != nil {
+		if tgam != nil && tgam.from != nil {
 			// player guess
-			if tgam.Type == TGATGuess {
-
+			if tgam.Type == TGATGuess && tgam.Guess >= 0 && tgam.Guess < len(t.activeQuestion.A) {
+				t.roundVotes[tgam.from] = tgam.Guess
 			}
 		}
 		break
@@ -175,11 +173,11 @@ func (t *TriviaGame) goToRoundFromLimboWithBroadcast() {
 	t.timer.Reset(t.roundTime)
 	t.pickNewQuestion()
 	t.broadcastGameUpdate(TriviaStateUpdateMessage{
-		Type: TSUTGoToRoundFromLimbo,
-		Round: t.round,
-		State: t.state,
+		Type:     TSUTGoToRoundFromLimbo,
+		Round:    t.round,
+		State:    t.state,
 		Question: &t.activeQuestion.Q,
-		Answers: &t.activeQuestion.A,
+		Answers:  &t.activeQuestion.A,
 	})
 }
 
@@ -191,7 +189,7 @@ func (t *TriviaGame) goToLimboFromRoundWithBroadcast() {
 	t.state = InLimbo
 	t.timer.Reset(t.limboTime)
 	t.broadcastGameUpdate(TriviaStateUpdateMessage{
-		Type: TSUTGoToLimboFromRound,
+		Type:  TSUTGoToLimboFromRound,
 		State: t.state,
 	})
 }
@@ -218,9 +216,9 @@ func (t *TriviaGame) joinTeamWithBroadcast(team int, who *Player) {
 	}
 	b, r := t.teamIdLists()
 	t.broadcastGameUpdate(TriviaStateUpdateMessage{
-		Type: TSUTTeam,
+		Type:        TSUTTeam,
 		BlueTeamIds: b,
-		RedTeamIds: r,
+		RedTeamIds:  r,
 	})
 }
 

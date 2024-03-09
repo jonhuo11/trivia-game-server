@@ -80,14 +80,14 @@ func (r *Room) run() {
 		if ram.Join != nil && *(ram.Join) {
 			r.join(ram.from)
 			// notify all players that someone joined
-			r.broadcastRoomUpdate(false) 
+			r.broadcastRoomUpdate(false)
 			// notify new player of game state, no need to do room update since broadcastRoomUpdate does this already
 			bl, red := r.game.teamIdLists()
-			tsum := &TriviaStateUpdateMessage{ 
-				Type: TSUTSyncNew,
+			tsum := &TriviaStateUpdateMessage{
+				Type:        TSUTSyncNew,
 				BlueTeamIds: bl,
-				RedTeamIds: red,
-				State: r.game.state,
+				RedTeamIds:  red,
+				State:       r.game.state,
 			}
 			if r.game.activeQuestion != nil {
 				tsum.Question = &r.game.activeQuestion.Q
@@ -103,9 +103,9 @@ func (r *Room) run() {
 			blue, red := r.game.teamIdLists()
 			// notify all players that someone left
 			r.broadcastGameUpdate(TriviaStateUpdateMessage{
-				Type: TSUTTeam,
+				Type:        TSUTTeam,
 				BlueTeamIds: blue,
-				RedTeamIds: red,
+				RedTeamIds:  red,
 			})
 			r.broadcastRoomUpdate(false)
 			break
@@ -158,7 +158,6 @@ func (r *Room) writeChat(msg string) {
 	r.chat = append(r.chat, msg)
 	//fmt.Println(r.chat)
 }
-
 
 // lets clients know about room updates
 func (r *Room) broadcastRoomUpdate(created bool) {
@@ -215,14 +214,13 @@ func (r *Room) syncPlayer(to *Player, rum *RoomUpdateMessage, tsum *TriviaStateU
 
 }
 
-
 // helper
 func outgoing(smt ServerMessageType, data interface{}) (*OutgoingMessage, error) {
 	if str, err := json.Marshal(data); err != nil {
 		return nil, err
 	} else {
 		return &OutgoingMessage{
-			Type: smt,
+			Type:    smt,
 			Content: str,
 		}, nil
 	}

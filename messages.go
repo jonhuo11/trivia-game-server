@@ -90,38 +90,38 @@ type RoomUpdateMessage struct {
 
 // types for update messages
 type TriviaStateUpdateType int
+
 const (
 	/*
-	blueTeamIds
-	redTeamIds
+		blueTeamIds
+		redTeamIds
 	*/
 	TSUTTeam TriviaStateUpdateType = 0
 
 	/*
-	state
-	round
-	question
-	answers
+		state
+		round
+		question
+		answers
 	*/
 	TSUTGoToRoundFromLimbo TriviaStateUpdateType = 1
 
 	/*
-	state
+		state
 	*/
 	TSUTGoToLimboFromRound TriviaStateUpdateType = 2
 
 	/*
-	Admin started the game
-	roundTime
-	limboTime
+		Admin started the game
+		roundTime
+		limboTime
 	*/
 	TSUTStartup TriviaStateUpdateType = 3
 
 	/*
-	Sync a new player
+		Sync a new player
 	*/
 	TSUTSyncNew TriviaStateUpdateType = 4
-
 )
 
 // outgoing
@@ -134,6 +134,8 @@ type TriviaStateUpdateMessage struct {
 
 	// list of red team players
 	RedTeamIds []string `json:"redTeamIds"`
+
+	// players mapped to their votes
 
 	// limbo (0), round(1), lobby(2)
 	State RoundState `json:"state"`
@@ -159,8 +161,9 @@ type TriviaStateUpdateMessage struct {
 
 // types for incoming trivia actions
 type TriviaGameActionType int
+
 const (
-	TGATJoin TriviaGameActionType = 0
+	TGATJoin  TriviaGameActionType = 0
 	TGATGuess TriviaGameActionType = 1
 )
 

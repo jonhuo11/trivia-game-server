@@ -6,13 +6,13 @@ import (
 )
 
 type TriviaQuestion struct {
-	Q string `json:"q"`
+	Q string         `json:"q"`
 	A []TriviaAnswer `json:"a"`
 }
 
 type TriviaAnswer struct {
-	A string `json:"a"`
-	Correct bool `json:"-"` // dont serialize this field
+	A       string `json:"a"`
+	Correct bool   `json:"-"` // dont serialize this field
 }
 
 type TriviaBank struct {
@@ -28,7 +28,7 @@ func loadTriviaBankFromString(s string) (*TriviaBank, error) {
 }
 
 func loadTriviaBankDefault() (TriviaBank, error) {
-	// TODO make this load dynamically 
+	// TODO make this load dynamically
 	trivraw, err := os.ReadFile("./assets/trivia/lol.trivia")
 	if err != nil {
 		return TriviaBank{}, err
