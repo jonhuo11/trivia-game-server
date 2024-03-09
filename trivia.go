@@ -22,8 +22,8 @@ type TriviaGame struct {
 	// state of the current round, limbo or in round
 	state RoundState
 
-	// votes, map of player to their selected answer string
-	roundVotes map[*Player]string
+	// votes, map of player to their selected answer number
+	roundVotes map[*Player]int
 
 	// rounds since game started
 	round int
@@ -39,12 +39,6 @@ type TriviaGame struct {
 
 	// score
 	redScore int
-
-	// current selected question
-	question string
-
-	// answer to current selected question
-	answer string
 
 	// assume this is always set
 	timer *time.Timer
@@ -71,8 +65,6 @@ func newTriviaGame(broadcaster func(TriviaStateUpdateMessage), debug bool) *Triv
 		red:                       make(map[*Player]bool),
 		blueScore:                 0,
 		redScore:                  0,
-		question:                  "",
-		answer:                    "",
 		debugMode:                 debug,
 		roundTime:                 DefaultTriviaRoundTime * time.Second,
 		limboTime:                 DefaultTriviaLimboTime * time.Second,
@@ -85,8 +77,6 @@ func (t *TriviaGame) startGame() {
 	t.round = 0
 	t.blueScore = 0
 	t.redScore = 0
-	t.question = ""
-	t.answer = ""
 	t.state = InLimbo
 	t.goToRoundFromLimbo()
 }
