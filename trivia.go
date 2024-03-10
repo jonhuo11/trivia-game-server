@@ -22,6 +22,12 @@ const DefaultTriviaLimboTime = 10
 // default time to transition from InLobby to InRound
 const DefaultTriviaStartupTime = 5
 
+// no vote default
+const NoVoteSelected int = -1
+
+// voted but invis, used for other team
+const HiddenVoteSelected int = -2
+
 type roomBroadcaster func(TriviaStateUpdateMessage)
 
 type TriviaGame struct {
@@ -81,6 +87,7 @@ func newTriviaGame(broadcaster roomBroadcaster, debug bool) *TriviaGame {
 		timer:                     timer,
 		blue:                      make(map[*Player]bool),
 		red:                       make(map[*Player]bool),
+		roundVotes: make(map[*Player]int),
 		bank:                      bank,
 		activeQuestion:            nil,
 		blueScore:                 0,
@@ -135,6 +142,43 @@ func (t *TriviaGame) actionHandlerWithBroadcast(tgam *TriviaGameActionMessage, i
 			// player guess
 			if tgam.Type == TGATGuess && tgam.Guess >= 0 && tgam.Guess < len(t.activeQuestion.A) {
 				t.roundVotes[tgam.from] = tgam.Guess
+
+				// broadcast guess to other players
+				// only let players know their own teams votes, but let them know who has voted on the other team
+
+				var bluevote int
+				var redvote int
+				if _, in := t.blue[tgam.from]; in {
+					bluevote = tgam.Guess
+					redvote = HiddenVoteSelected
+				} else if _, in := t.red[tgam.from]; in {
+					redvote = tgam.Guess
+					bluevote = HiddenVoteSelected
+				} else { // something malicious, player is not in either team but could submit a vote
+					break
+				}
+
+				blueMsg, _ := outgoing(TriviaGameUpdate, TriviaStateUpdateMessage{
+					Type: TSUTPlayerVoted,
+					Vote: PlayerVote{
+						Id: tgam.from.id,
+						Vote: bluevote,
+					},
+				})
+				redMsg, _ := outgoing(TriviaGameUpdate, TriviaStateUpdateMessage{
+					Type: TSUTPlayerVoted,
+					Vote: PlayerVote{
+						Id: tgam.from.id,
+						Vote: redvote,
+					},
+				})
+				for p := range t.blue {
+					p.send <- *blueMsg
+				}
+				for p := range t.red {
+					p.send <- *redMsg
+				}
+				return
 			}
 		}
 		break
@@ -168,6 +212,10 @@ func (t *TriviaGame) goToRoundFromLimboWithBroadcast() {
 	if t.state != InLimbo {
 		return
 	}
+
+	// calculate winners
+
+	// go to next round
 	t.round++
 	t.state = InRound
 	t.timer.Reset(t.roundTime)
@@ -222,9 +270,6 @@ func (t *TriviaGame) joinTeamWithBroadcast(team int, who *Player) {
 	})
 }
 
-func (t *TriviaGame) applyPlayerGuessWithBroadcast(guess int, who *Player) {
-
-}
 
 func (t *TriviaGame) broadcastGameUpdate(tsum TriviaStateUpdateMessage) {
 	if t.debugMode {

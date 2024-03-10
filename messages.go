@@ -122,7 +122,17 @@ const (
 		Sync a new player
 	*/
 	TSUTSyncNew TriviaStateUpdateType = 4
+
+	/*
+		A player voted
+	*/
+	TSUTPlayerVoted TriviaStateUpdateType = 5
 )
+
+type PlayerVote struct {
+	Id string `json:"id"`
+	Vote int `json:"vote"`
+}
 
 // outgoing
 type TriviaStateUpdateMessage struct {
@@ -135,7 +145,11 @@ type TriviaStateUpdateMessage struct {
 	// list of red team players
 	RedTeamIds []string `json:"redTeamIds"`
 
-	// players mapped to their votes
+	// players mapped to their votes, used when syncing
+	Votes []PlayerVote `json:"votes"`
+
+	// a vote made by a player (omit during sync)
+	Vote PlayerVote `json:"vote"`
 
 	// limbo (0), round(1), lobby(2)
 	State RoundState `json:"state"`

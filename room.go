@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 )
 
 type Room struct {
@@ -82,16 +83,32 @@ func (r *Room) run() {
 			// notify all players that someone joined
 			r.broadcastRoomUpdate(false)
 			// notify new player of game state, no need to do room update since broadcastRoomUpdate does this already
+			// TODO move this code which gathers all fields for a TSUM struct into a separate helper
 			bl, red := r.game.teamIdLists()
 			tsum := &TriviaStateUpdateMessage{
 				Type:        TSUTSyncNew,
 				BlueTeamIds: bl,
 				RedTeamIds:  red,
 				State:       r.game.state,
+				RoundTime: int64(r.game.roundTime / time.Second),
+				LimboTime: int64(r.game.limboTime / time.Second),
+				StartupTime: int64(r.game.roundTime / time.Second),
 			}
 			if r.game.activeQuestion != nil {
 				tsum.Question = &r.game.activeQuestion.Q
 				tsum.Answers = &r.game.activeQuestion.A
+
+				// sync votes, but they are hidden
+				votes := []PlayerVote{}
+				for p := range r.game.roundVotes {
+					_, inblue := r.game.blue[p]
+					_, inred := r.game.red[p]
+					if inblue || inred {
+						votes = append(votes, PlayerVote{p.id, HiddenVoteSelected})
+					}
+				}
+				tsum.Votes = votes
+
 			}
 			r.syncPlayer(ram.from, nil, tsum)
 			break
